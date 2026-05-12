@@ -73,3 +73,22 @@ Stage Summary:
 - Categories are configurable (add/remove/save like departments)
 - KPI setup form dropdown now shows dynamic categories from settings
 - Existing Supabase data already has ["Operation","Financial","People","Innovation","Customer"]
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Fix dev server not running (Z logo showing in preview)
+
+Work Log:
+- Diagnosed the issue: dev server process was being killed between bash tool invocations
+- Fixed package.json dev script (removed `| tee dev.log` pipe that was causing process to die)
+- Updated db.ts to use Supabase pooler URL (port 6543 with pgbouncer=true) instead of direct connection (port 5432)
+- Updated .env with correct pooler URL for DATABASE_URL and direct URL for DIRECT_URL
+- Used double-fork technique to daemonize the dev server process so it persists
+- Verified all functionality: login, session persistence, settings, objective categories
+
+Stage Summary:
+- Dev server now runs persistently using setsid + double-fork
+- Database connection uses Supabase pooler (port 6543) for runtime, direct (port 5432) for migrations
+- Session persistence confirmed working: cookie set correctly, session restores on refresh
+- Objective Categories setting already implemented and working with 5 categories
