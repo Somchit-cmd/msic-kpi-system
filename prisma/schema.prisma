@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id
+  name         String
+  title        String
+  department   String
+  role         String   // 'employee' | 'manager' | 'president' | 'admin' | 'superadmin'
+  canEvaluate  Boolean  @default(false) // true = employee can evaluate subordinates
+  managerId    String?
+  username     String   @unique
+  password     String
+  email        String
+  telephone    String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  manager      User?    @relation("ManagerTeam", fields: [managerId], references: [id])
+  team         User[]   @relation("ManagerTeam")
+}
+
+model KpiPlan {
+  id                String   @id
+  planType          String   // 'performance' | 'quarterly'
+  parentPlanId      String?
+  employeeId        String
+  employeeName      String
+  employeeTitle     String
+  department        String
+  managerId         String
+  managerName       String
+  year              String
+  period            String?  // H1 or H2
+  isLeadership      Boolean  @default(false)
+  setupStatus       String   @default("draft") // SetupStatus: 'draft' | 'submitted' | 'manager_rejected' | 'manager_approved' | 'hr_rejected' | 'hr_approved'
+  objectives        String   @default("[]")   // JSON string of Objective[]
+  behaviors         String   @default("[]")   // JSON string of BehaviorScore[]
+  adjustingCriteria String?
+  managerFeedback   String?  // Manager's feedback during setup review
+  hrFeedback        String?  // HR's feedback during setup review
+  createdAt         String
+  createdBy         String
+  updatedAt         DateTime @updatedAt
+}
+
+model Evaluation {
+  id              String   @id
+  employeeId      String
+  employeeName    String
+  employeeTitle   String
+  department      String
+  managerId       String
+  managerName     String
+  period          String
+  reviewType      String   // 'performance' | 'quarterly'
+  planId          String?
+  status          String   @default("draft") // 'draft' | 'submitted' | 'manager_scored' | 'hr_signed'
+  objectives      String   @default("[]")    // JSON string of Objective[]
+  behaviors       String   @default("[]")    // JSON string of BehaviorScore[]
+  adjustingFactor String   @default("{\"selfScore\":0,\"managerScore\":0,\"notes\":\"\"}") // JSON
+  hrNotes         String   @default("")
+  isLeadership    Boolean  @default(false)
+  auditLog        String   @default("[]")    // JSON string of AuditLogEntry[]
+  createdAt       String
+  updatedAt       String
+}
+
+model Setting {
+  id    String @id
+  key   String @unique  // e.g. "departments", "jobTitles", "objectiveCategories"
+  value String @default("[]")  // JSON string of string[]
+}
+
+model ActivityLog {
+  id             String   @id
+  entityType     String   // 'evaluation' | 'plan' | 'user'
+  entityId       String?
+  action         String   // 'create' | 'update' | 'delete' | 'submit' | 'approve' | 'reject'
+  performedBy    String
+  performedByName String
+  role           String
+  details        String?
+  createdAt      DateTime @default(now())
+}
+
+model WorkflowLog {
+  id             String   @id
+  entityType     String
+  entityId       String
+  entityName     String
+  fromStatus     String
+  toStatus       String
+  performedBy    String
+  performedByName String
+  role           String
+  feedback       String?
+  details        String?
+  transitionedAt DateTime @default(now())
+}
