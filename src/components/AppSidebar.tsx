@@ -125,7 +125,7 @@ export function AppSidebar() {
               <ChevronDown className="h-4 w-4 text-white/40" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-red-50 focus:text-destructive dark:focus:bg-red-950">
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </DropdownMenuItem>
