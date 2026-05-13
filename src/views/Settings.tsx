@@ -30,11 +30,11 @@ export default function Settings() {
   const [savingTitle, setSavingTitle] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
 
-  if (currentUser.role !== 'superadmin') {
+  if (currentUser.role !== 'superadmin' && currentUser.role !== 'admin') {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground">Only System Admins can access Settings.</p>
+        <p className="text-muted-foreground">Only System Admins and HR Admins can access Settings.</p>
       </div>
     );
   }

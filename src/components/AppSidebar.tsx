@@ -46,6 +46,7 @@ export function AppSidebar() {
         { title: 'Quarterly Reviews', url: '/quarterly-reviews', icon: CalendarRange },
         { title: 'Team', url: '/team', icon: Users },
         { title: 'User Management', url: '/users', icon: Shield },
+        { title: 'Settings', url: '/settings', icon: Wrench },
       ];
     }
 
