@@ -79,14 +79,14 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarContent className="bg-sidebar">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider px-3 mb-1">
+          <SidebarGroupLabel className="text-sidebar-foreground/70 text-xs uppercase tracking-wider px-3 mb-1">
             {!collapsed && (
               <div className="flex items-center gap-2 py-4">
-                <ClipboardList className="h-6 w-6 text-sidebar-primary" />
-                <span className="font-bold text-lg text-sidebar-foreground">KPI System</span>
+                <ClipboardList className="h-6 w-6 text-white" />
+                <span className="font-bold text-lg text-white">KPI System</span>
               </div>
             )}
-            {collapsed && <ClipboardList className="h-6 w-6 text-sidebar-primary mx-auto" />}
+            {collapsed && <ClipboardList className="h-6 w-6 text-white mx-auto" />}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -96,8 +96,8 @@ export function AppSidebar() {
                     <button
                       onClick={() => navigate(item.url)}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors w-full',
-                        currentView === item.url && 'bg-sidebar-accent text-sidebar-primary font-medium'
+                        'flex items-center gap-3 px-3 py-2.5 rounded-md text-white/80 hover:bg-white/15 hover:text-white transition-colors w-full',
+                        currentView === item.url && 'bg-white/20 text-white font-medium'
                       )}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
@@ -111,18 +111,18 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="bg-sidebar border-t border-sidebar-border">
+      <SidebarFooter className="bg-sidebar border-t border-white/15">
         {!collapsed && (
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full px-3 py-3 flex items-center gap-3 hover:bg-sidebar-accent rounded-md transition-colors">
-              <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-sm font-semibold">
+            <DropdownMenuTrigger className="w-full px-3 py-3 flex items-center gap-3 hover:bg-white/15 rounded-md transition-colors">
+              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-semibold">
                 {currentUser.name.split(' ').map(n => n[0]).join('')}
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{currentUser.name}</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">{currentUser.title}</p>
+                <p className="text-sm font-medium text-white truncate">{currentUser.name}</p>
+                <p className="text-xs text-white/60 truncate">{currentUser.title}</p>
               </div>
-              <ChevronDown className="h-4 w-4 text-sidebar-foreground/40" />
+              <ChevronDown className="h-4 w-4 text-white/40" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuItem onClick={() => setCurrentRole('employee')}>Switch to Employee</DropdownMenuItem>
