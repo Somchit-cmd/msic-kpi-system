@@ -1,159 +1,110 @@
 # MSIC KPI Evaluation System
 
-A comprehensive web-based KPI (Key Performance Indicator) evaluation system designed for organizations to manage employee performance reviews, quarterly assessments, and goal tracking. Built with modern web technologies and a role-based access control system.
+A web-based KPI (Key Performance Indicator) evaluation system for managing employee performance reviews, quarterly assessments, and goal tracking. Built with Next.js, Prisma, and Supabase.
 
-## Features
-
-### Performance Evaluation Workflow
-- **3-Part Evaluation Form**: Personal Objectives (45%), Core Values & Behaviors (45%), Adjusting Factors (10%)
-- **KPI Plan Setup**: Employees set up performance and quarterly KPI plans with objectives, strategies, and support needs
-- **Evaluator Review**: Evaluators add Criteria of Rating during plan review
-- **Multi-step Workflow**: Draft → Submitted → Evaluator Scored → HR Approved/Rejected
-- **PDF Export**: Generate professional PDF reports with score breakdowns and signature blocks
-- **Quarterly Reviews**: Select objectives from Performance KPI plans for quarterly assessment
-
-### Role-Based Access Control
-| Role | Capabilities |
-|------|-------------|
-| **System Admin** | Create user accounts (name, role, login credentials), delete users, access all settings |
-| **HR Admin** | Edit user profiles (department, job title, evaluator, contact info), approve/reject evaluations, access settings |
-| **Employee** | Set up KPI plans, submit self-evaluations, view own evaluations |
-
-### Evaluator System
-- Evaluator status is automatically derived from the organizational chart — anyone with direct reports is an evaluator
-- Evaluators review and score their team members' evaluations
-- Evaluators add Criteria of Rating to KPI plans during review
-
-### Settings Management
-- **Department Options**: Configure available departments
-- **Job Title Options**: Define job titles per department
-- **Objective Categories**: Customize KPI objective categories (e.g., Operation, Financial, People)
-
-## Tech Stack
-
-- **Framework**: [Next.js 16](https://nextjs.org/) with App Router
-- **Language**: TypeScript 5
-- **Styling**: Tailwind CSS 4 + [shadcn/ui](https://ui.shadcn.com/) component library
-- **Database**: PostgreSQL ([Supabase](https://supabase.com/)) via [Prisma ORM](https://www.prisma.io/)
-- **Authentication**: Session-based with httpOnly cookies + bcrypt password hashing
-- **PDF Generation**: jsPDF + jspdf-autotable
-- **Icons**: Lucide React
-- **Notifications**: Sonner (toast)
-
-## Getting Started
-
-### Prerequisites
-- Node.js 18+ or [Bun](https://bun.sh/)
-- PostgreSQL database (Supabase recommended)
-
-### Installation
+## Quick Start
 
 ```bash
-# Clone the repository
+# Clone and install
 git clone https://github.com/Somchit-cmd/msic-kpi-system.git
 cd msic-kpi-system
-
-# Install dependencies
 bun install
 
-# Set up environment variables
+# Configure environment
 cp .env.example .env
-# Edit .env with your database connection strings
+# Edit .env with your Supabase credentials
 
-# Push database schema
+# Set up database
 bun run db:push
 
 # Start development server
 bun run dev
 ```
 
-### Environment Variables
+## Tech Stack
 
-Create a `.env` file in the project root:
+| Technology | Purpose |
+|-----------|---------|
+| **Next.js 16** (App Router) | Full-stack React framework |
+| **TypeScript 5** | Type-safe development |
+| **Tailwind CSS 4** + **shadcn/ui** | Styling & UI components |
+| **Prisma ORM** | Database access (PostgreSQL/Supabase) |
+| **bcrypt** | Password hashing |
+| **jsPDF** | PDF report generation |
+
+## Features
+
+- **KPI Plan Setup** — Employees define objectives, strategies, and support needs; evaluators add rating criteria
+- **Performance Evaluation** — 3-part scoring: Personal Objectives (45%), Core Values & Behaviors (45%), Adjusting Factors (10%)
+- **Quarterly Reviews** — Track % achievement against approved KPI objectives
+- **Role-Based Access** — 3 roles with evaluator status derived from the organizational chart
+- **PDF Export** — Professional evaluation reports with score breakdowns and signature blocks
+- **Settings Management** — Configurable departments, job titles, and objective categories
+
+## Roles & Permissions
+
+| Role | Capabilities |
+|------|-------------|
+| **System Admin** | Create user accounts (name/role/credentials), delete users, system settings |
+| **HR Admin** | Edit user profiles (dept/title/evaluator/contact), approve evaluations, settings |
+| **Employee** | Set up KPI plans, self-evaluate, view own records |
+
+> **Evaluator** is not a separate role — anyone with direct reports automatically becomes an evaluator for their team.
+
+## Workflow
+
+```
+Employee creates KPI Plan → Evaluator reviews & adds criteria → HR approves
+                                                    ↓
+Employee self-scores → Evaluator scores → HR signs off → PDF export
+```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | System architecture, tech stack, project structure, design decisions |
+| [API Reference](docs/API_REFERENCE.md) | Complete REST API endpoint documentation |
+| [Workflows](docs/WORKFLOW.md) | Business processes, role permissions, evaluation flow |
+| [Database](docs/DATABASE.md) | Schema, relationships, JSON structures, connection config |
+| [Deployment](docs/DEPLOYMENT.md) | Setup, deployment, security, troubleshooting |
+
+## Environment Variables
 
 ```env
-# Supabase PostgreSQL (Pooler URL for connections)
-DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+# Supabase PostgreSQL (Pooler URL — for runtime queries)
+DATABASE_URL=postgresql://postgres.[ref]:[pass]@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
 
-# Direct URL for schema migrations
-DIRECT_URL=postgresql://postgres.[project-ref]:[password]@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres
-```
-
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── auth/route.ts          # Login & session management
-│   │   ├── users/route.ts         # User CRUD
-│   │   ├── users/[id]/route.ts    # Single user operations
-│   │   ├── evaluations/           # Evaluation CRUD
-│   │   ├── plans/                 # KPI plan CRUD
-│   │   └── settings/              # System settings
-│   ├── layout.tsx                 # Root layout
-│   └── page.tsx                   # Single-page app router
-├── components/
-│   ├── ui/                        # shadcn/ui components
-│   ├── AppSidebar.tsx             # Navigation sidebar
-│   ├── ScoreButtons.tsx           # 1-5 score input
-│   ├── StatusBadge.tsx            # Evaluation status badge
-│   └── WorkflowProgress.tsx       # Workflow step indicator
-├── context/
-│   └── EvaluationContext.tsx      # Global state & business logic
-├── types/
-│   └── evaluation.ts              # TypeScript types & helpers
-├── utils/
-│   └── pdfExport.ts               # PDF generation
-├── views/
-│   ├── Dashboard.tsx              # Dashboard overview
-│   ├── Login.tsx                  # Authentication
-│   ├── SetupKpi.tsx               # KPI plan listing
-│   ├── SetupKpiForm.tsx           # KPI plan form & review
-│   ├── PerformanceReviews.tsx     # Performance review listing
-│   ├── EvaluationView.tsx         # Performance evaluation detail
-│   ├── NewEvaluation.tsx          # Create performance evaluation
-│   ├── QuarterlyReviews.tsx       # Quarterly review listing
-│   ├── QuarterlyReviewView.tsx    # Quarterly review detail
-│   ├── NewQuarterlyReview.tsx     # Create quarterly review
-│   ├── Team.tsx                   # Team overview
-│   ├── UserManagement.tsx         # User CRUD management
-│   └── Settings.tsx               # System settings
-└── data/
-    └── mockData.ts                # Seed data
-```
-
-## Database Schema
-
-| Model | Description |
-|-------|-------------|
-| **User** | Employee profiles with role, department, evaluator relationship |
-| **KpiPlan** | KPI setup plans (performance & quarterly) with objectives |
-| **Evaluation** | Performance/quarterly evaluation records with scores |
-| **Setting** | System configuration (departments, job titles, categories) |
-| **ActivityLog** | Audit trail for entity changes |
-| **WorkflowLog** | Status transition history |
-
-## Deployment
-
-### Netlify
-
-The project includes `netlify.toml` configuration for deployment:
-
-```bash
-# Build for production
-bun run build
+# Direct URL (for Prisma schema migrations)
+DIRECT_URL=postgresql://postgres.[ref]:[pass]@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres
 ```
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `bun run dev` | Start development server on port 3000 |
+| `bun run dev` | Start dev server on port 3000 |
 | `bun run build` | Build for production |
 | `bun run lint` | Run ESLint |
 | `bun run db:push` | Push Prisma schema to database |
 | `bun run db:generate` | Generate Prisma client |
+
+## Project Structure
+
+```
+src/
+├── app/api/          # REST API routes (auth, users, evaluations, plans, settings)
+├── components/       # UI components (shadcn/ui + custom)
+├── context/          # Global state (EvaluationContext)
+├── types/            # TypeScript types and helpers
+├── utils/            # PDF export utility
+├── views/            # Page components (13 views)
+└── data/             # Seed/mock data
+```
+
+## Deployment
+
+The project is configured for [Netlify](https://netlify.com) deployment with `netlify.toml`. See [Deployment Guide](docs/DEPLOYMENT.md) for details.
 
 ## License
 
