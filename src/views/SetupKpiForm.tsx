@@ -16,6 +16,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SetupStatusBadge } from '@/components/StatusBadge';
 import { Plus, Trash2, ChevronDown, ArrowLeft, Copy, AlertCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 const PERFORMANCE_PERIODS = ['H1', 'H2'];
@@ -91,6 +101,7 @@ export default function SetupKpiForm() {
   // Review feedback
   const [managerFeedback, setManagerFeedback] = useState(existing?.managerFeedback ?? '');
   const [hrFeedback, setHrFeedback] = useState(existing?.hrFeedback ?? '');
+  const [deleteObjId, setDeleteObjId] = useState<string | null>(null);
 
   const totalWeight = objectives.reduce((s, o) => s + o.weight, 0);
 
@@ -101,6 +112,7 @@ export default function SetupKpiForm() {
   const removeObjective = (id: string) => {
     if (objectives.length <= 2) return;
     setObjectives(prev => prev.filter(o => o.id !== id));
+    setDeleteObjId(null);
   };
   const updateObjective = (id: string, field: keyof Objective, value: any) => {
     setObjectives(prev => prev.map(o => o.id === id ? { ...o, [field]: value } : o));
@@ -437,12 +449,8 @@ export default function SetupKpiForm() {
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
                 Weight total: <span className={totalWeight === 100 ? 'text-success font-bold' : 'text-destructive font-bold'}>{totalWeight}%</span>
+                <span className="ml-2">({objectives.length}/10 objectives)</span>
               </p>
-              {canEditObjectives && (
-                <Button variant="outline" size="sm" onClick={addObjective} disabled={objectives.length >= 10}>
-                  <Plus className="h-4 w-4 mr-1" /> Add Objective
-                </Button>
-              )}
             </div>
 
             {objectives.map((obj, i) => (
@@ -522,7 +530,7 @@ export default function SetupKpiForm() {
                       </Collapsible>
                     </div>
                     {canEditObjectives && objectives.length > 2 && (
-                      <Button variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => removeObjective(obj.id)}>
+                      <Button variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => setDeleteObjId(obj.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -530,6 +538,45 @@ export default function SetupKpiForm() {
                 </CardContent>
               </Card>
             ))}
+
+            {/* Add Objective button at bottom for better UX */}
+            {canEditObjectives && (
+              <Button
+                variant="outline"
+                className="w-full border-dashed"
+                onClick={() => {
+                  addObjective();
+                  setTimeout(() => {
+                    const el = document.getElementById('objectives-tab-content');
+                    if (el) el.scrollTop = el.scrollHeight;
+                  }, 100);
+                }}
+                disabled={objectives.length >= 10}
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add Objective
+              </Button>
+            )}
+
+            {/* Delete Objective confirmation dialog */}
+            <AlertDialog open={!!deleteObjId} onOpenChange={o => !o && setDeleteObjId(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Objective?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove this objective and its content. You must have at least 2 objectives. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => deleteObjId && removeObjective(deleteObjId)}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
 
           <TabsContent value="adjusting" className="space-y-4 mt-4">
