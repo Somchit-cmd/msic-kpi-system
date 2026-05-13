@@ -33,6 +33,10 @@ export default function SetupKpiForm() {
   const isManagerView = viewParams.mode === 'review' && hasDirectReports;
   const isHrView = viewParams.mode === 'hr-review' && currentUser.role === 'admin';
 
+  // Is this someone else's plan? (evaluator, HR, or superadmin viewing a subordinate)
+  const isOwner = !existing || existing.employeeId === currentUser.id;
+  const isReadOnlyView = existing && !isOwner && !isManagerView && !isHrView;
+
   const isLeadership = existing?.isLeadership ?? isLeadershipRole(hasDirectReports);
 
   // State
@@ -214,8 +218,8 @@ export default function SetupKpiForm() {
   const title = isQuarterly ? 'Quarterly KPI' : 'Performance KPI';
   const periods = isQuarterly ? QUARTERLY_PERIODS : PERFORMANCE_PERIODS;
 
-  // Can the user edit objectives?
-  const canEditObjectives = !isManagerView && !isHrView && (!existing || existing.setupStatus === 'draft' || existing.setupStatus === 'manager_rejected' || existing.setupStatus === 'hr_rejected');
+  // Can the user edit objectives? (only the owner, and only in draft/rejected status)
+  const canEditObjectives = isOwner && !isManagerView && !isHrView && !isReadOnlyView && (!existing || existing.setupStatus === 'draft' || existing.setupStatus === 'manager_rejected' || existing.setupStatus === 'hr_rejected');
   // Can the manager add scoreCriteria?
   const canAddScoreCriteria = isManagerView && existing?.setupStatus === 'submitted';
   // Can HR approve/reject?
@@ -229,10 +233,12 @@ export default function SetupKpiForm() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">
-            {isManagerView ? 'Review' : isHrView ? 'HR Review' : (existing ? 'Edit' : 'New')} {title} Plan
+            {isReadOnlyView ? 'View' : isManagerView ? 'Review' : isHrView ? 'HR Review' : (existing ? 'Edit' : 'New')} {title} Plan
           </h1>
           <p className="text-muted-foreground mt-1">
-            {isManagerView
+            {isReadOnlyView
+              ? `Viewing ${existing?.employeeName}'s ${title} plan.`
+              : isManagerView
               ? 'Review objectives and add Criteria of Rating for each.'
               : isHrView
                 ? 'Final review before the KPI plan is approved.'
@@ -273,7 +279,20 @@ export default function SetupKpiForm() {
       )}
 
       {/* Basic Information */}
-      {(isEmployee && !isManagerView && !isHrView) ? (
+      {isReadOnlyView ? (
+        /* Read-only view — viewing someone else's plan */
+        existing && (
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Plan Information</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div><span className="text-muted-foreground">Employee:</span> <span className="font-medium ml-1">{existing.employeeName}</span></div>
+              <div><span className="text-muted-foreground">Title:</span> <span className="font-medium ml-1">{existing.employeeTitle}</span></div>
+              <div><span className="text-muted-foreground">Department:</span> <span className="font-medium ml-1">{existing.department}</span></div>
+              <div><span className="text-muted-foreground">Year/Period:</span> <span className="font-medium ml-1">{existing.year} {existing.period ?? ''}</span></div>
+            </CardContent>
+          </Card>
+        )
+      ) : (isEmployee && !isManagerView && !isHrView) ? (
         <Card>
           <CardHeader><CardTitle className="text-lg">Basic Information</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
