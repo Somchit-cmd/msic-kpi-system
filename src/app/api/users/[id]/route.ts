@@ -14,7 +14,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       department: true,
       role: true,
       canEvaluate: true,
-      evaluatorId: true,
+      managerId: true,
+      email: true,
+      telephone: true,
       createdAt: true,
     },
   });

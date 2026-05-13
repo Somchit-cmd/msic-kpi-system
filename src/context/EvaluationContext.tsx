@@ -115,7 +115,19 @@ export function EvaluationProvider({ children }: { children: React.ReactNode }) 
     return () => { cancelled = true; };
   }, []);
 
-  const currentUser = users.find(u => u.id === currentUserId) || users[0];
+  const currentUser: User = users.find(u => u.id === currentUserId) || users[0] || {
+    id: '',
+    name: '',
+    title: '',
+    department: '',
+    role: 'employee' as Role,
+    canEvaluate: false,
+    managerId: null,
+    username: '',
+    password: '',
+    email: '',
+    telephone: '',
+  };
 
   // Helper: does the current user have evaluator capabilities?
   const canEvaluateOthers = currentUser
@@ -209,13 +221,15 @@ export function EvaluationProvider({ children }: { children: React.ReactNode }) 
         const user = await res.json();
         setCurrentUserId(user.id);
         setIsLoggedIn(true);
+        // Re-fetch users to ensure the list is up to date
+        await fetchUsers();
         return { success: true };
       }
       return { success: false, error: 'Invalid username or password' };
     } catch {
       return { success: false, error: 'Login failed' };
     }
-  }, []);
+  }, [fetchUsers]);
 
   const setCurrentRole = useCallback((role: Role) => {
     const user = users.find(u => u.role === role);
