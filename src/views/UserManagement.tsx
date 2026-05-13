@@ -262,11 +262,11 @@ export default function UserManagement() {
     setDeleteId(null);
   };
 
-  const departmentOptions = settings.departments.length > 0 ? settings.departments : [...new Set(users.map(u => u.department))];
+  const departmentOptions = settings.departments.length > 0 ? settings.departments : [...new Set(users.map(u => u.department).filter(Boolean))];
   const formDeptTitles = settings.jobTitles[form.department] || [];
   const hasDeptTitles = Object.keys(settings.jobTitles).length > 0 && formDeptTitles.length > 0;
-  const fallbackTitles = [...new Set(users.filter(u => u.department === form.department).map(u => u.title))];
-  const titleOptions = hasDeptTitles ? formDeptTitles : (form.department ? fallbackTitles : [...new Set(users.map(u => u.title))]);
+  const fallbackTitles = [...new Set(users.filter(u => u.department === form.department).map(u => u.title).filter(Boolean))];
+  const titleOptions = hasDeptTitles ? formDeptTitles : (form.department ? fallbackTitles : [...new Set(users.map(u => u.title).filter(Boolean))]);
 
   // Check if user profile is incomplete (missing department/title)
   const isIncomplete = (u: User) => !u.department || !u.title;
@@ -509,7 +509,7 @@ export default function UserManagement() {
                   <div className="space-y-2">
                     <Label>Department <span className="text-destructive">*</span></Label>
                     {departmentOptions.length > 0 ? (
-                      <Select value={form.department} onValueChange={v => setForm({ ...form, department: v, title: '' })}>
+                      <Select value={form.department || undefined} onValueChange={v => setForm({ ...form, department: v, title: '' })}>
                         <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
                         <SelectContent>
                           {departmentOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -522,7 +522,7 @@ export default function UserManagement() {
                   <div className="space-y-2">
                     <Label>Job Title <span className="text-destructive">*</span></Label>
                     {titleOptions.length > 0 ? (
-                      <Select value={form.title} onValueChange={v => setForm({ ...form, title: v })}>
+                      <Select value={form.title || undefined} onValueChange={v => setForm({ ...form, title: v })}>
                         <SelectTrigger><SelectValue placeholder="Select title" /></SelectTrigger>
                         <SelectContent>
                           {titleOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -537,7 +537,7 @@ export default function UserManagement() {
                 {form.role === 'employee' && (
                   <div className="space-y-2">
                     <Label>Manager</Label>
-                    <Select value={form.managerId} onValueChange={v => setForm({ ...form, managerId: v })}>
+                    <Select value={form.managerId || undefined} onValueChange={v => setForm({ ...form, managerId: v })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a manager" />
                       </SelectTrigger>
