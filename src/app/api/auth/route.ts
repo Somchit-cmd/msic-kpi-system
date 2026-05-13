@@ -9,7 +9,8 @@ const COOKIE_MAX_AGE_REMEMBER = 2592000; // 30 days (remember me)
 export async function POST(req: NextRequest) {
   const { username, password, rememberMe } = await req.json();
 
-  const user = await db.user.findUnique({ where: { username } });
+  // Case-insensitive username lookup
+  const user = await db.user.findFirst({ where: { username: { equals: username, mode: 'insensitive' } } });
   if (!user) {
     return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
   }
