@@ -11,14 +11,14 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Plus } from 'lucide-react';
 
 export default function QuarterlyReviews() {
-  const { evaluations, currentUser, plans, navigate } = useEvaluation();
+  const { evaluations, currentUser, hasDirectReports, hasManager, plans, navigate } = useEvaluation();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const reviewType: ReviewType = 'quarterly';
   const visible = (currentUser.role === 'admin'
     ? evaluations
-    : currentUser.role === 'president'
+    : hasDirectReports && !hasManager
       ? evaluations.filter(e => e.managerId === currentUser.id || e.employeeId === currentUser.id)
       : evaluations.filter(e => e.employeeId === currentUser.id || e.managerId === currentUser.id)
   ).filter(e => e.reviewType === reviewType);

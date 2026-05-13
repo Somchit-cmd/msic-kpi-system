@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 export default function QuarterlyReviewView() {
-  const { viewParams, navigate, getEvaluation, updateEvaluation, currentUser } = useEvaluation();
+  const { viewParams, navigate, getEvaluation, updateEvaluation, currentUser, hasDirectReports } = useEvaluation();
   const id = viewParams.id;
   const eval_ = getEvaluation(id || '');
 
@@ -27,7 +27,7 @@ export default function QuarterlyReviewView() {
     );
   }
 
-  const isManager = (currentUser.role === 'manager' || currentUser.role === 'president' || (currentUser.role === 'employee' && currentUser.canEvaluate)) && eval_.managerId === currentUser.id;
+  const isManager = hasDirectReports && eval_.managerId === currentUser.id;
   const isAdmin = currentUser.role === 'admin';
   const canScore = isManager && eval_.status === 'submitted';
   const canSignOff = isAdmin && eval_.status === 'manager_scored';

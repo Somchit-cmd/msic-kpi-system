@@ -7,9 +7,9 @@ import { calcFinalScore, getGrade, getGradeColor } from '@/types/evaluation';
 import { Users as UsersIcon } from 'lucide-react';
 
 export default function Team() {
-  const { currentUser, users, evaluations, navigate } = useEvaluation();
+  const { currentUser, hasDirectReports, users, evaluations, navigate } = useEvaluation();
 
-  if (currentUser.role === 'employee' && !currentUser.canEvaluate) {
+  if (currentUser.role === 'employee' && !hasDirectReports) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <UsersIcon className="h-12 w-12 text-muted-foreground mb-4" />

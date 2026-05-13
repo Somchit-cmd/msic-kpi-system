@@ -8,13 +8,14 @@ interface EvaluationContextType {
   isLoggedIn: boolean;
   currentUser: User;
   canEvaluateOthers: boolean;
+  hasDirectReports: boolean;
+  hasManager: boolean;
   users: User[];
   evaluations: Evaluation[];
   settings: AppSettings;
   loading: boolean;
   login: (username: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  setCurrentRole: (role: Role) => void;
   addEvaluation: (eval_: Evaluation) => Promise<void>;
   updateEvaluation: (eval_: Evaluation) => Promise<void>;
   getEvaluation: (id: string) => Evaluation | undefined;
@@ -121,18 +122,20 @@ export function EvaluationProvider({ children }: { children: React.ReactNode }) 
     title: '',
     department: '',
     role: 'employee' as Role,
-    canEvaluate: false,
     managerId: null,
     username: '',
-    password: '',
     email: '',
     telephone: '',
   };
 
-  // Helper: does the current user have evaluator capabilities?
-  const canEvaluateOthers = currentUser
-    ? (currentUser.role === 'manager' || currentUser.role === 'president' || currentUser.role === 'admin' || (currentUser.role === 'employee' && currentUser.canEvaluate))
-    : false;
+  // Derive evaluator status from org chart
+  const canEvaluateOthers = users.some(u => u.managerId === currentUser.id);
+
+  // Does current user have direct reports? (= they are an evaluator/manager in the org chart)
+  const hasDirectReports = users.some(u => u.managerId === currentUser.id);
+
+  // Does current user have a manager? (= they need to set up their own KPI)
+  const hasManager = !!currentUser.managerId;
 
   // Plans
   const getPlan = useCallback((id: string) => plans.find(p => p.id === id), [plans]);
@@ -231,11 +234,6 @@ export function EvaluationProvider({ children }: { children: React.ReactNode }) 
     }
   }, [fetchUsers]);
 
-  const setCurrentRole = useCallback((role: Role) => {
-    const user = users.find(u => u.role === role);
-    if (user) setCurrentUserId(user.id);
-  }, [users]);
-
   const logout = useCallback(async () => {
     await fetch('/api/auth', { method: 'DELETE' });
     setIsLoggedIn(false);
@@ -276,34 +274,35 @@ export function EvaluationProvider({ children }: { children: React.ReactNode }) 
   }, [evaluations, currentUser]);
 
   const getPendingActions = useCallback(() => {
-    if (currentUser.role === 'manager' || currentUser.role === 'president' || (currentUser.role === 'employee' && currentUser.canEvaluate)) {
+    if (hasDirectReports) {
       return evaluations.filter(e => e.managerId === currentUser.id && e.status === 'submitted');
     }
     if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
       return evaluations.filter(e => e.status === 'manager_scored');
     }
     return [];
-  }, [evaluations, currentUser]);
+  }, [evaluations, currentUser, hasDirectReports]);
 
   const getTeamEvaluations = useCallback(() => {
-    if (currentUser.role === 'manager' || currentUser.role === 'president' || currentUser.role === 'admin' || currentUser.role === 'superadmin' || (currentUser.role === 'employee' && currentUser.canEvaluate)) {
+    if (hasDirectReports || currentUser.role === 'admin' || currentUser.role === 'superadmin') {
       return evaluations;
     }
     return [];
-  }, [evaluations, currentUser]);
+  }, [evaluations, currentUser, hasDirectReports]);
 
   return (
     <EvaluationContext.Provider value={{
       isLoggedIn,
       currentUser,
       canEvaluateOthers,
+      hasDirectReports,
+      hasManager,
       users,
       evaluations,
       settings,
       loading,
       login,
       logout,
-      setCurrentRole,
       addEvaluation,
       updateEvaluation,
       getEvaluation,

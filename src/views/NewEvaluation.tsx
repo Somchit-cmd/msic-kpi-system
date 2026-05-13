@@ -14,9 +14,9 @@ import { ScoreButtons } from '@/components/ScoreButtons';
 import { toast } from 'sonner';
 
 export default function NewEvaluation() {
-  const { plans, currentUser, addEvaluation, navigate } = useEvaluation();
+  const { plans, currentUser, hasDirectReports, addEvaluation, navigate } = useEvaluation();
 
-  const myPlans = plans.filter(p => p.planType === 'performance' && p.setupStatus === 'hr_approved' && (p.employeeId === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'president' || (currentUser.role === 'employee' && currentUser.canEvaluate)));
+  const myPlans = plans.filter(p => p.planType === 'performance' && p.setupStatus === 'hr_approved' && (p.employeeId === currentUser.id || currentUser.role === 'admin' || hasDirectReports));
 
   const [planId, setPlanId] = useState<string>(myPlans[0]?.id ?? '');
   const [year, setYear] = useState('2026');

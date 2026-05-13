@@ -10,9 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 export default function NewQuarterlyReview() {
-  const { plans, currentUser, addEvaluation, navigate } = useEvaluation();
+  const { plans, currentUser, hasDirectReports, addEvaluation, navigate } = useEvaluation();
 
-  const myPlans = plans.filter(p => p.planType === 'quarterly' && p.setupStatus === 'hr_approved' && (p.employeeId === currentUser.id || currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'president' || (currentUser.role === 'employee' && currentUser.canEvaluate)));
+  const myPlans = plans.filter(p => p.planType === 'quarterly' && p.setupStatus === 'hr_approved' && (p.employeeId === currentUser.id || currentUser.role === 'admin' || hasDirectReports));
 
   const [planId, setPlanId] = useState<string>(myPlans[0]?.id ?? '');
   const [year, setYear] = useState('2026');

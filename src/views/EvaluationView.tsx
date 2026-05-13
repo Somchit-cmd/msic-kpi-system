@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { useState, useMemo } from 'react';
 
 export default function EvaluationView() {
-  const { viewParams, navigate } = useEvaluation();
+  const { viewParams, navigate, hasDirectReports } = useEvaluation();
   const id = viewParams.id;
   const { getEvaluation, updateEvaluation, currentUser } = useEvaluation();
   const eval_ = getEvaluation(id || '');
@@ -35,7 +35,7 @@ export default function EvaluationView() {
     );
   }
 
-  const isManager = (currentUser.role === 'manager' || currentUser.role === 'president' || (currentUser.role === 'employee' && currentUser.canEvaluate)) && eval_.managerId === currentUser.id;
+  const isManager = hasDirectReports && eval_.managerId === currentUser.id;
   const isAdmin = currentUser.role === 'admin';
   const isOwner = eval_.employeeId === currentUser.id;
   const canScore = isManager && eval_.status === 'submitted';

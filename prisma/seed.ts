@@ -31,7 +31,6 @@ async function main() {
           title: user.title,
           department: user.department,
           role: user.role,
-          canEvaluate: user.canEvaluate ?? false,
           managerId: user.managerId,
           username: user.username,
           password: user.password,

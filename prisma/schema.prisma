@@ -17,8 +17,7 @@ model User {
   name         String
   title        String
   department   String
-  role         String   // 'employee' | 'manager' | 'president' | 'admin' | 'superadmin'
-  canEvaluate  Boolean  @default(false) // true = employee can evaluate subordinates
+  role         String   // 'employee' | 'admin' | 'superadmin'
   managerId    String?
   username     String   @unique
   password     String

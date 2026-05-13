@@ -31,31 +31,24 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Role, User } from '@/types/evaluation';
 import { Pencil, Trash2, UserPlus, Shield, ShieldCheck, ShieldAlert, User as UserIcon, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 const roleLabels: Record<Role, string> = {
   employee: 'Employee',
-  manager: 'Manager',
-  president: 'President',
   admin: 'HR Admin',
   superadmin: 'System Admin',
 };
 
 const roleVariants: Record<Role, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   employee: 'secondary',
-  manager: 'default',
-  president: 'default',
   admin: 'outline',
   superadmin: 'destructive',
 };
 
 const roleIcons: Record<Role, typeof Shield> = {
   employee: UserIcon,
-  manager: Shield,
-  president: ShieldCheck,
   admin: ShieldCheck,
   superadmin: ShieldAlert,
 };
@@ -66,7 +59,6 @@ interface UserFormState {
   title: string;
   department: string;
   role: Role;
-  canEvaluate: boolean;
   managerId: string;
   username: string;
   password: string;
@@ -80,7 +72,6 @@ const emptyForm: UserFormState = {
   title: '',
   department: '',
   role: 'employee',
-  canEvaluate: false,
   managerId: '',
   username: '',
   password: '',
@@ -107,7 +98,7 @@ export default function UserManagement() {
     );
   }
 
-  const managers = users.filter(u => u.role === 'manager' || u.role === 'president');
+  const managers = users.filter(u => u.id !== editingId && u.role === 'employee');
 
   const filtered = users.filter(u => {
     const matchesSearch =
@@ -138,7 +129,6 @@ export default function UserManagement() {
       title: u.title,
       department: u.department,
       role: u.role,
-      canEvaluate: u.canEvaluate ?? false,
       managerId: u.managerId ?? '',
       username: u.username,
       password: u.password,
@@ -176,8 +166,7 @@ export default function UserManagement() {
       title: form.title.trim(),
       department: form.department.trim(),
       role: form.role,
-      canEvaluate: form.role === 'employee' ? form.canEvaluate : false,
-      managerId: (form.role === 'employee' || form.role === 'manager') && form.managerId ? form.managerId : null,
+      managerId: form.role === 'employee' && form.managerId ? form.managerId : null,
       username: form.username.trim(),
       password: form.password?.trim() || undefined, // only send if changed
       email: form.email.trim(),
@@ -226,7 +215,7 @@ export default function UserManagement() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {roleCounts.map(({ role, count }) => {
           const Icon = roleIcons[role];
           return (
@@ -319,7 +308,7 @@ export default function UserManagement() {
                       <td className="py-3">
                         <div className="flex items-center gap-2">
                           <Badge variant={roleVariants[u.role]}>{roleLabels[u.role]}</Badge>
-                          {u.role === 'employee' && u.canEvaluate && (
+                          {u.role === 'employee' && users.some(t => t.managerId === u.id) && (
                             <Badge variant="outline" className="text-xs">Evaluator</Badge>
                           )}
                         </div>
@@ -397,7 +386,7 @@ export default function UserManagement() {
             </div>
             <div className="space-y-2">
               <Label>Role</Label>
-              <Select value={form.role} onValueChange={(v: Role) => setForm({ ...form, role: v, canEvaluate: v === 'employee' ? form.canEvaluate : false })}>
+              <Select value={form.role} onValueChange={(v: Role) => setForm({ ...form, role: v })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -409,24 +398,11 @@ export default function UserManagement() {
               </Select>
             </div>
             {form.role === 'employee' && (
-              <div className="flex items-center gap-3 p-3 border rounded-lg">
-                <Checkbox
-                  id="canEvaluate"
-                  checked={form.canEvaluate}
-                  onCheckedChange={(checked) => setForm({ ...form, canEvaluate: !!checked })}
-                />
-                <div>
-                  <Label htmlFor="canEvaluate" className="cursor-pointer">Can Evaluate Subordinates</Label>
-                  <p className="text-xs text-muted-foreground">Enable this if the employee supervises others and needs to score their evaluations.</p>
-                </div>
-              </div>
-            )}
-            {(form.role === 'employee' || form.role === 'manager') && (
               <div className="space-y-2">
-                <Label>{form.role === 'employee' ? 'Manager' : 'President / Manager'}</Label>
+                <Label>Manager</Label>
                 <Select value={form.managerId} onValueChange={v => setForm({ ...form, managerId: v })}>
                   <SelectTrigger>
-                    <SelectValue placeholder={form.role === 'employee' ? 'Select a manager' : 'Select evaluator'} />
+                    <SelectValue placeholder="Select a manager" />
                   </SelectTrigger>
                   <SelectContent>
                     {managers.map(m => (

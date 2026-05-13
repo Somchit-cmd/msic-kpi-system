@@ -12,7 +12,6 @@ export async function GET() {
       title: true,
       department: true,
       role: true,
-      canEvaluate: true,
       managerId: true,
       email: true,
       telephone: true,

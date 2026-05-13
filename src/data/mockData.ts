@@ -1,13 +1,13 @@
 import { User, Evaluation, generateBehaviorScores, defaultScoreCriteria } from '@/types/evaluation';
 
 export const mockUsers: User[] = [
-  { id: 'emp1', name: 'Sarah Johnson', title: 'Software Engineer', department: 'Engineering', role: 'employee', canEvaluate: false, managerId: 'mgr1', username: 'sarah.johnson', password: 'employee123', email: 'sarah.johnson@company.com', telephone: '+1-555-0101' },
-  { id: 'mgr1', name: 'Michael Chen', title: 'Engineering Manager', department: 'Engineering', role: 'manager', canEvaluate: false, managerId: 'pres1', username: 'michael.chen', password: 'manager123', email: 'michael.chen@company.com', telephone: '+1-555-0102' },
-  { id: 'hr1', name: 'Lisa Park', title: 'HR Director', department: 'Human Resources', role: 'admin', canEvaluate: false, managerId: null, username: 'lisa.park', password: 'hradmin123', email: 'lisa.park@company.com', telephone: '+1-555-0103' },
-  { id: 'sa1', name: 'David Kim', title: 'System Administrator', department: 'IT', role: 'superadmin', canEvaluate: false, managerId: null, username: 'david.kim', password: 'sysadmin123', email: 'david.kim@company.com', telephone: '+1-555-0104' },
-  { id: 'emp2', name: 'James Wilson', title: 'Senior Developer', department: 'Engineering', role: 'employee', canEvaluate: true, managerId: 'mgr1', username: 'james.wilson', password: 'employee123', email: 'james.wilson@company.com', telephone: '+1-555-0105' },
-  { id: 'emp3', name: 'Emily Davis', title: 'Product Designer', department: 'Design', role: 'employee', canEvaluate: false, managerId: 'mgr1', username: 'emily.davis', password: 'employee123', email: 'emily.davis@company.com', telephone: '+1-555-0106' },
-  { id: 'pres1', name: 'Robert Tanaka', title: 'President', department: 'Executive', role: 'president', canEvaluate: false, managerId: null, username: 'robert.tanaka', password: 'president123', email: 'robert.tanaka@company.com', telephone: '+1-555-0100' },
+  { id: 'emp1', name: 'Sarah Johnson', title: 'Software Engineer', department: 'Engineering', role: 'employee', managerId: 'mgr1', username: 'sarah.johnson', password: 'employee123', email: 'sarah.johnson@company.com', telephone: '+1-555-0101' },
+  { id: 'mgr1', name: 'Michael Chen', title: 'Engineering Manager', department: 'Engineering', role: 'employee', managerId: 'pres1', username: 'michael.chen', password: 'manager123', email: 'michael.chen@company.com', telephone: '+1-555-0102' },
+  { id: 'hr1', name: 'Lisa Park', title: 'HR Director', department: 'Human Resources', role: 'admin', managerId: null, username: 'lisa.park', password: 'hradmin123', email: 'lisa.park@company.com', telephone: '+1-555-0103' },
+  { id: 'sa1', name: 'David Kim', title: 'System Administrator', department: 'IT', role: 'superadmin', managerId: null, username: 'david.kim', password: 'sysadmin123', email: 'david.kim@company.com', telephone: '+1-555-0104' },
+  { id: 'emp2', name: 'James Wilson', title: 'Senior Developer', department: 'Engineering', role: 'employee', managerId: 'mgr1', username: 'james.wilson', password: 'employee123', email: 'james.wilson@company.com', telephone: '+1-555-0105' },
+  { id: 'emp3', name: 'Emily Davis', title: 'Product Designer', department: 'Design', role: 'employee', managerId: 'mgr1', username: 'emily.davis', password: 'employee123', email: 'emily.davis@company.com', telephone: '+1-555-0106' },
+  { id: 'pres1', name: 'Robert Tanaka', title: 'President', department: 'Executive', role: 'employee', managerId: null, username: 'robert.tanaka', password: 'president123', email: 'robert.tanaka@company.com', telephone: '+1-555-0100' },
 ];
 
 const makeScored = (isLeadership: boolean, selfScore: number, managerScore: number) =>
@@ -119,7 +119,7 @@ export const mockEvaluations: Evaluation[] = [
     auditLog: [
       { timestamp: '2025-09-01T09:15:00Z', action: 'Draft Created', toStatus: 'draft', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
       { timestamp: '2025-09-28T16:40:00Z', action: 'Submitted to Manager', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
-      { timestamp: '2025-10-05T11:20:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'manager' },
+      { timestamp: '2025-10-05T11:20:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
     ],
   },
   {
@@ -145,7 +145,7 @@ export const mockEvaluations: Evaluation[] = [
     auditLog: [
       { timestamp: '2025-09-05T10:00:00Z', action: 'Draft Created', toStatus: 'draft', actorId: 'emp3', actorName: 'Emily Davis', actorRole: 'employee' },
       { timestamp: '2025-09-30T14:25:00Z', action: 'Submitted to Manager', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp3', actorName: 'Emily Davis', actorRole: 'employee' },
-      { timestamp: '2025-10-08T09:50:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'manager' },
+      { timestamp: '2025-10-08T09:50:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
     ],
   },
   {
@@ -171,7 +171,7 @@ export const mockEvaluations: Evaluation[] = [
     auditLog: [
       { timestamp: '2025-03-01T08:30:00Z', action: 'Draft Created', toStatus: 'draft', actorId: 'emp2', actorName: 'James Wilson', actorRole: 'employee' },
       { timestamp: '2025-03-25T17:10:00Z', action: 'Submitted to Manager', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp2', actorName: 'James Wilson', actorRole: 'employee' },
-      { timestamp: '2025-04-05T13:00:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'manager' },
+      { timestamp: '2025-04-05T13:00:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
       { timestamp: '2025-04-15T10:45:00Z', action: 'HR Approved & Finalized', fromStatus: 'manager_scored', toStatus: 'hr_approved', actorId: 'hr1', actorName: 'Lisa Park', actorRole: 'admin', notes: 'Approved for promotion review.' },
     ],
   },
@@ -198,7 +198,7 @@ export const mockEvaluations: Evaluation[] = [
     auditLog: [
       { timestamp: '2025-03-02T09:00:00Z', action: 'Draft Created', toStatus: 'draft', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
       { timestamp: '2025-03-28T15:20:00Z', action: 'Submitted to Manager', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
-      { timestamp: '2025-04-08T11:00:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'manager' },
+      { timestamp: '2025-04-08T11:00:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
       { timestamp: '2025-04-18T14:30:00Z', action: 'HR Approved & Finalized', fromStatus: 'manager_scored', toStatus: 'hr_approved', actorId: 'hr1', actorName: 'Lisa Park', actorRole: 'admin', notes: 'Filed to employee record.' },
     ],
   },

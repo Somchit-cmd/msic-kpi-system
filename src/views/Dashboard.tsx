@@ -7,15 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClipboardList, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function Dashboard() {
-  const { currentUser, canEvaluateOthers, getMyEvaluations, getPendingActions, evaluations, navigate } = useEvaluation();
+  const { currentUser, hasDirectReports, hasManager, getMyEvaluations, getPendingActions, evaluations, navigate } = useEvaluation();
   const myEvals = getMyEvaluations();
   const pending = getPendingActions();
   const completed = myEvals.filter(e => e.status === 'hr_approved');
 
-  // President: no evaluations for themselves since nobody evaluates them
-  const isPresident = currentUser.role === 'president';
+  // Top-level evaluator: has direct reports but no manager (like a CEO/president)
+  const isTopEvaluator = hasDirectReports && !hasManager;
 
-  const stats = isPresident
+  const stats = isTopEvaluator
     ? [
         { label: 'Pending Evaluations', value: pending.length, icon: AlertCircle, color: 'text-warning' },
         { label: 'Team Evaluations', value: evaluations.filter(e => e.managerId === currentUser.id).length, icon: ClipboardList, color: 'text-primary' },
@@ -86,7 +86,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {!isPresident && (
+      {!isTopEvaluator && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">My Evaluations</CardTitle>

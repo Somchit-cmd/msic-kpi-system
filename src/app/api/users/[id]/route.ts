@@ -13,7 +13,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       title: true,
       department: true,
       role: true,
-      canEvaluate: true,
       managerId: true,
       email: true,
       telephone: true,

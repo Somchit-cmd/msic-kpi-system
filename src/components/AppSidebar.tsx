@@ -20,59 +20,58 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Role } from '@/types/evaluation';
 import { cn } from '@/lib/utils';
-
-const baseNavItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Setup KPI', url: '/setup-kpi', icon: Settings2 },
-  { title: 'Performance Reviews', url: '/performance-reviews', icon: FileText },
-  { title: 'Quarterly Reviews', url: '/quarterly-reviews', icon: CalendarRange },
-  { title: 'Team', url: '/team', icon: Users },
-];
-
-const superAdminNavItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Team', url: '/team', icon: Users },
-  { title: 'User Management', url: '/users', icon: Shield },
-  { title: 'Settings', url: '/settings', icon: Wrench },
-];
-
-// President sees same nav as manager (no Team nav item needed separately — they see Team via their evaluator role)
-const presidentNavItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Setup KPI', url: '/setup-kpi', icon: Settings2 },
-  { title: 'Performance Reviews', url: '/performance-reviews', icon: FileText },
-  { title: 'Quarterly Reviews', url: '/quarterly-reviews', icon: CalendarRange },
-  { title: 'Team', url: '/team', icon: Users },
-];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
-  const { currentUser, setCurrentRole, logout, navigate, currentView } = useEvaluation();
+  const { currentUser, logout, navigate, currentView, hasDirectReports, hasManager } = useEvaluation();
 
-  const navItems = currentUser.role === 'superadmin'
-    ? superAdminNavItems
-    : currentUser.role === 'president'
-      ? presidentNavItems
-      : baseNavItems.filter(item => {
-          // Hide Team for regular employees (non-evaluator)
-          if (item.url === '/team' && currentUser.role === 'employee' && !currentUser.canEvaluate) return false;
-          return true;
-        });
+  // Build nav items based on role and org chart position
+  const navItems = (() => {
+    if (currentUser.role === 'superadmin') {
+      return [
+        { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+        { title: 'Team', url: '/team', icon: Users },
+        { title: 'User Management', url: '/users', icon: Shield },
+        { title: 'Settings', url: '/settings', icon: Wrench },
+      ];
+    }
+
+    if (currentUser.role === 'admin') {
+      return [
+        { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+        { title: 'Setup KPI', url: '/setup-kpi', icon: Settings2 },
+        { title: 'Performance Reviews', url: '/performance-reviews', icon: FileText },
+        { title: 'Quarterly Reviews', url: '/quarterly-reviews', icon: CalendarRange },
+        { title: 'Team', url: '/team', icon: Users },
+      ];
+    }
+
+    // Employee — navigation based on org chart position
+    const items = [
+      { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+    ];
+
+    if (hasManager) {
+      items.push({ title: 'Setup KPI', url: '/setup-kpi', icon: Settings2 });
+    }
+
+    items.push(
+      { title: 'Performance Reviews', url: '/performance-reviews', icon: FileText },
+      { title: 'Quarterly Reviews', url: '/quarterly-reviews', icon: CalendarRange },
+    );
+
+    if (hasDirectReports) {
+      items.push({ title: 'Team', url: '/team', icon: Users });
+    }
+
+    return items;
+  })();
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
-  };
-
-  const roleLabels: Record<Role, string> = {
-    employee: 'Employee',
-    manager: 'Manager',
-    president: 'President',
-    admin: 'HR Admin',
-    superadmin: 'System Admin',
   };
 
   return (

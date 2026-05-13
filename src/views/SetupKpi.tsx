@@ -9,25 +9,24 @@ import { Plus, FileText, CalendarRange, Eye, CheckCircle, Trash2 } from 'lucide-
 import { KpiPlan, PlanType, SetupStatus } from '@/types/evaluation';
 
 export default function SetupKpi() {
-  const { plans, currentUser, deletePlan, navigate } = useEvaluation();
+  const { plans, currentUser, hasDirectReports, deletePlan, navigate } = useEvaluation();
 
   const isSuperAdmin = currentUser.role === 'superadmin';
   const isAdmin = currentUser.role === 'admin';
-  const canEvaluateOthers = currentUser.role === 'manager' || currentUser.role === 'president' || (currentUser.role === 'employee' && currentUser.canEvaluate);
 
   // Visibility: superadmin sees all, admin sees all, others see own + subordinates
   const visible = isSuperAdmin || isAdmin
     ? plans
-    : canEvaluateOthers
+    : hasDirectReports
       ? plans.filter(p => p.employeeId === currentUser.id || p.managerId === currentUser.id)
       : plans.filter(p => p.employeeId === currentUser.id);
 
   const performance = visible.filter(p => p.planType === 'performance');
   const quarterly = visible.filter(p => p.planType === 'quarterly');
 
-  // Can current user review (manager/president)?
+  // Can current user review (has direct reports)?
   const canReview = (plan: KpiPlan): boolean => {
-    return canEvaluateOthers && plan.managerId === currentUser.id && plan.setupStatus === 'submitted';
+    return hasDirectReports && plan.managerId === currentUser.id && plan.setupStatus === 'submitted';
   };
 
   // Can HR review?

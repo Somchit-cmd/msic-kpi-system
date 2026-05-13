@@ -1,4 +1,4 @@
-export type Role = 'employee' | 'manager' | 'president' | 'admin' | 'superadmin';
+export type Role = 'employee' | 'admin' | 'superadmin';
 export type EvalStatus = 'draft' | 'submitted' | 'manager_scored' | 'hr_approved' | 'hr_rejected';
 export type SetupStatus = 'draft' | 'submitted' | 'manager_rejected' | 'manager_approved' | 'hr_rejected' | 'hr_approved';
 export type ObjectiveCategory = string; // Configurable via Settings > Objective Categories
@@ -126,7 +126,6 @@ export interface User {
   title: string;
   department: string;
   role: Role;
-  canEvaluate: boolean; // true = this employee can evaluate subordinates
   managerId: string | null;
   username: string;
   password: string;
@@ -327,10 +326,8 @@ export const BEHAVIOR_CATEGORIES: BehaviorCategory[] = [
 ];
 
 // Helper: check if a user should have Leadership behaviors
-export function isLeadershipRole(user: User): boolean {
-  if (user.role === 'manager' || user.role === 'president') return true;
-  if (user.role === 'employee' && user.canEvaluate) return true;
-  return false;
+export function isLeadershipRole(hasDirectReports: boolean): boolean {
+  return hasDirectReports;
 }
 
 // Helper to generate flat BehaviorScore[] from categories

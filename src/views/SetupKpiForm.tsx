@@ -22,19 +22,18 @@ const PERFORMANCE_PERIODS = ['H1', 'H2'];
 const QUARTERLY_PERIODS = ['Q1', 'Q2', 'Q3', 'Q4'];
 
 export default function SetupKpiForm() {
-  const { currentUser, users, addPlan, updatePlan, getPlan, plans, navigate, viewParams, settings } = useEvaluation();
+  const { currentUser, users, addPlan, updatePlan, getPlan, plans, navigate, viewParams, settings, hasDirectReports, hasManager } = useEvaluation();
   const editId = viewParams.id;
   const existing = editId ? getPlan(editId) : undefined;
   const planType: PlanType = (existing?.planType ?? (viewParams.type as PlanType) ?? 'performance');
   const isQuarterly = planType === 'quarterly';
   const isEmployee = currentUser.role === 'employee';
-  const isPresident = currentUser.role === 'president';
 
   // Who is viewing this form?
-  const isManagerView = viewParams.mode === 'review' && (currentUser.role === 'manager' || currentUser.role === 'president' || (currentUser.role === 'employee' && currentUser.canEvaluate));
+  const isManagerView = viewParams.mode === 'review' && hasDirectReports;
   const isHrView = viewParams.mode === 'hr-review' && currentUser.role === 'admin';
 
-  const isLeadership = existing?.isLeadership ?? isLeadershipRole(currentUser);
+  const isLeadership = existing?.isLeadership ?? isLeadershipRole(hasDirectReports);
 
   // State
   const [year, setYear] = useState(existing?.year ?? '2026');
@@ -43,7 +42,7 @@ export default function SetupKpiForm() {
   const [selectedEmployee, setSelectedEmployee] = useState(existing?.employeeName ?? currentUser.name);
 
   const departments = [...new Set(users.map(u => u.department))];
-  const employeesInDept = isPresident
+  const employeesInDept = hasDirectReports && !hasManager
     ? users.filter(u => u.managerId === currentUser.id)
     : users.filter(u => u.department === selectedDepartment);
 
@@ -148,7 +147,7 @@ export default function SetupKpiForm() {
       finalObjectives = objectives;
     }
 
-    const targetIsLeadership = isLeadershipRole(empUser ?? currentUser);
+    const targetIsLeadership = isLeadershipRole(users.some(u => u.managerId === (empUser ?? currentUser).id));
 
     const plan: KpiPlan = {
       id: existing?.id ?? crypto.randomUUID(),
