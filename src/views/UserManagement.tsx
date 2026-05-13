@@ -89,11 +89,14 @@ export default function UserManagement() {
   const [form, setForm] = useState<UserFormState>(emptyForm);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  if (currentUser.role !== 'superadmin') {
+  const isSuperAdmin = currentUser.role === 'superadmin';
+  const isHrAdmin = currentUser.role === 'admin';
+
+  if (!isSuperAdmin && !isHrAdmin) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground">Only System Admins can access User Management.</p>
+        <p className="text-muted-foreground">You don't have access to User Management.</p>
       </div>
     );
   }
@@ -139,47 +142,110 @@ export default function UserManagement() {
   };
 
   const handleSave = () => {
-    if (!form.name.trim() || !form.title.trim() || !form.department.trim()) {
-      toast.error('Missing fields', { description: 'Name, title, and department are required.' });
+    if (isSuperAdmin && !editingId) {
+      // System Admin creating new user — only Name, Role, Username, Password required
+      if (!form.name.trim()) {
+        toast.error('Missing field', { description: 'Full Name is required.' });
+        return;
+      }
+      if (!form.username.trim()) {
+        toast.error('Missing credentials', { description: 'Username is required for login.' });
+        return;
+      }
+      if (!form.password?.trim()) {
+        toast.error('Missing credentials', { description: 'Password is required for new users.' });
+        return;
+      }
+      const usernameTaken = users.some(u => u.username.toLowerCase() === form.username.trim().toLowerCase());
+      if (usernameTaken) {
+        toast.error('Username taken', { description: 'This username is already in use.' });
+        return;
+      }
+      const payload: User = {
+        id: `u-${Date.now()}`,
+        name: form.name.trim(),
+        title: '',
+        department: '',
+        role: form.role,
+        managerId: null,
+        username: form.username.trim(),
+        password: form.password.trim(),
+        email: '',
+        telephone: '',
+      };
+      addUser(payload);
+      toast.success('User created', { description: `${payload.name} has been added. HR Admin can complete the profile.` });
+      setDialogOpen(false);
       return;
     }
-    if (!form.username.trim()) {
-      toast.error('Missing credentials', { description: 'Username is required for login.' });
+
+    if (isHrAdmin && editingId) {
+      // HR Admin editing user — Name, Department, Job Title, Manager, Contact info
+      if (!form.name.trim()) {
+        toast.error('Missing field', { description: 'Full Name is required.' });
+        return;
+      }
+      if (!form.department.trim()) {
+        toast.error('Missing field', { description: 'Department is required.' });
+        return;
+      }
+      if (!form.title.trim()) {
+        toast.error('Missing field', { description: 'Job Title is required.' });
+        return;
+      }
+      if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        toast.error('Invalid email', { description: 'Please enter a valid email address.' });
+        return;
+      }
+      const payload: User = {
+        id: editingId,
+        name: form.name.trim(),
+        title: form.title.trim(),
+        department: form.department.trim(),
+        role: form.role, // keep existing role
+        managerId: form.role === 'employee' && form.managerId ? form.managerId : null,
+        username: form.username, // keep existing username
+        password: undefined, // don't change password
+        email: form.email.trim(),
+        telephone: form.telephone.trim(),
+      };
+      updateUser(payload);
+      toast.success('Profile updated', { description: `${payload.name}'s profile has been updated.` });
+      setDialogOpen(false);
       return;
     }
-    if (!editingId && !form.password?.trim()) {
-      toast.error('Missing credentials', { description: 'Password is required for new users.' });
-      return;
-    }
-    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      toast.error('Invalid email', { description: 'Please enter a valid email address.' });
-      return;
-    }
-    const usernameTaken = users.some(u => u.username.toLowerCase() === form.username.trim().toLowerCase() && u.id !== editingId);
-    if (usernameTaken) {
-      toast.error('Username taken', { description: 'This username is already in use.' });
-      return;
-    }
-    const payload: User = {
-      id: editingId ?? `u-${Date.now()}`,
-      name: form.name.trim(),
-      title: form.title.trim(),
-      department: form.department.trim(),
-      role: form.role,
-      managerId: form.role === 'employee' && form.managerId ? form.managerId : null,
-      username: form.username.trim(),
-      password: form.password?.trim() || undefined, // only send if changed
-      email: form.email.trim(),
-      telephone: form.telephone.trim(),
-    };
-    if (editingId) {
+
+    if (isSuperAdmin && editingId) {
+      // System Admin editing user — same as create: Name, Role, Username, Password
+      if (!form.name.trim()) {
+        toast.error('Missing field', { description: 'Full Name is required.' });
+        return;
+      }
+      if (!form.username.trim()) {
+        toast.error('Missing credentials', { description: 'Username is required.' });
+        return;
+      }
+      const usernameTaken = users.some(u => u.username.toLowerCase() === form.username.trim().toLowerCase() && u.id !== editingId);
+      if (usernameTaken) {
+        toast.error('Username taken', { description: 'This username is already in use.' });
+        return;
+      }
+      const payload: User = {
+        id: editingId,
+        name: form.name.trim(),
+        title: form.title, // keep existing
+        department: form.department, // keep existing
+        role: form.role,
+        managerId: form.role === 'employee' && form.managerId ? form.managerId : null,
+        username: form.username.trim(),
+        password: form.password?.trim() || undefined,
+        email: form.email, // keep existing
+        telephone: form.telephone, // keep existing
+      };
       updateUser(payload);
       toast.success('User updated', { description: `${payload.name} has been updated.` });
-    } else {
-      addUser(payload);
-      toast.success('User created', { description: `${payload.name} has been added.` });
+      setDialogOpen(false);
     }
-    setDialogOpen(false);
   };
 
   const handleDelete = () => {
@@ -196,23 +262,31 @@ export default function UserManagement() {
   };
 
   const departmentOptions = settings.departments.length > 0 ? settings.departments : [...new Set(users.map(u => u.department))];
-  // Job titles filtered by the department selected in the form
   const formDeptTitles = settings.jobTitles[form.department] || [];
   const hasDeptTitles = Object.keys(settings.jobTitles).length > 0 && formDeptTitles.length > 0;
   const fallbackTitles = [...new Set(users.filter(u => u.department === form.department).map(u => u.title))];
   const titleOptions = hasDeptTitles ? formDeptTitles : (form.department ? fallbackTitles : [...new Set(users.map(u => u.title))]);
+
+  // Check if user profile is incomplete (missing department/title)
+  const isIncomplete = (u: User) => !u.department || !u.title;
 
   return (
     <div className="space-y-6 w-full">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">User Management</h1>
-          <p className="text-muted-foreground mt-1">Manage all users, assign roles, and control access.</p>
+          <p className="text-muted-foreground mt-1">
+            {isSuperAdmin
+              ? 'Create user accounts and manage login credentials.'
+              : 'Complete user profiles with department, job title, and contact information.'}
+          </p>
         </div>
-        <Button onClick={openCreate}>
-          <UserPlus className="h-4 w-4" />
-          Add User
-        </Button>
+        {isSuperAdmin && (
+          <Button onClick={openCreate}>
+            <UserPlus className="h-4 w-4" />
+            Add User
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -298,12 +372,16 @@ export default function UserManagement() {
                           </div>
                           <div className="flex flex-col">
                             <span className="font-medium">{u.name}</span>
-                            <span className="text-xs text-muted-foreground">{u.title} · {u.department}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {u.title && u.department ? `${u.title} · ${u.department}` : (
+                                <span className="text-amber-600">Profile incomplete</span>
+                              )}
+                            </span>
                           </div>
                         </div>
                       </td>
                       <td className="py-3 font-mono text-xs">{u.username}</td>
-                      <td className="py-3 text-muted-foreground">{u.email}</td>
+                      <td className="py-3 text-muted-foreground">{u.email || '—'}</td>
                       <td className="py-3 text-muted-foreground">{u.telephone || '—'}</td>
                       <td className="py-3">
                         <div className="flex items-center gap-2">
@@ -316,18 +394,23 @@ export default function UserManagement() {
                       <td className="py-3 text-muted-foreground">{mgr?.name ?? '—'}</td>
                       <td className="py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteId(u.id)}
-                            disabled={u.id === currentUser.id}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {/* HR Admin can edit any employee; System Admin can always edit */}
+                          {(isHrAdmin || isSuperAdmin) && (
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isSuperAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeleteId(u.id)}
+                              disabled={u.id === currentUser.id}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -349,123 +432,176 @@ export default function UserManagement() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit User' : 'Add User'}</DialogTitle>
+            <DialogTitle>
+              {editingId
+                ? isHrAdmin ? 'Edit User Profile' : 'Edit User'
+                : 'Add New User'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+
+            {/* ===== FULL NAME — always shown ===== */}
             <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <Label>Full Name <span className="text-destructive">*</span></Label>
+              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Enter full name" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Department</Label>
-                {departmentOptions.length > 0 ? (
-                  <Select value={form.department} onValueChange={v => setForm({ ...form, department: v, title: '' })}>
-                    <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+
+            {/* ===== SYSTEM ADMIN: Role + Login Credentials ===== */}
+            {isSuperAdmin && (
+              <>
+                <div className="space-y-2">
+                  <Label>Role <span className="text-destructive">*</span></Label>
+                  <Select value={form.role} onValueChange={(v: Role) => setForm({ ...form, role: v, managerId: '' })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      {departmentOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                      {(Object.keys(roleLabels) as Role[]).map(r => (
+                        <SelectItem key={r} value={r}>{roleLabels[r]}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                ) : (
-                  <Input value={form.department} onChange={e => setForm({ ...form, department: e.target.value, title: '' })} placeholder="Enter department" />
+                </div>
+
+                {form.role === 'employee' && (
+                  <div className="space-y-2">
+                    <Label>Manager</Label>
+                    <Select value={form.managerId} onValueChange={v => setForm({ ...form, managerId: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {managers.map(m => (
+                          <SelectItem key={m.id} value={m.id}>{m.name} ({m.title || 'No title'})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label>Job Title</Label>
-                {titleOptions.length > 0 ? (
-                  <Select value={form.title} onValueChange={v => setForm({ ...form, title: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select title" /></SelectTrigger>
-                    <SelectContent>
-                      {titleOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={form.department ? 'Enter title' : 'Select department first'} />
+
+                <div className="border-t pt-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Login Credentials</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Username <span className="text-destructive">*</span></Label>
+                      <Input
+                        value={form.username}
+                        onChange={e => setForm({ ...form, username: e.target.value })}
+                        placeholder="e.g. john.doe"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Password {!editingId && <span className="text-destructive">*</span>}</Label>
+                      <Input
+                        type="password"
+                        value={form.password || ''}
+                        onChange={e => setForm({ ...form, password: e.target.value })}
+                        placeholder={editingId ? 'Leave blank to keep current' : 'Set password'}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </div>
+                  {editingId && (
+                    <p className="text-xs text-muted-foreground">Leave password blank to keep the current password unchanged.</p>
+                  )}
+                </div>
+
+                {editingId && (
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-muted-foreground">
+                      Department, Job Title, and Contact Info are managed by HR Admin.
+                    </p>
+                  </div>
                 )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={form.role} onValueChange={(v: Role) => setForm({ ...form, role: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(roleLabels) as Role[]).map(r => (
-                    <SelectItem key={r} value={r}>{roleLabels[r]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {form.role === 'employee' && (
-              <div className="space-y-2">
-                <Label>Manager</Label>
-                <Select value={form.managerId} onValueChange={v => setForm({ ...form, managerId: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a manager" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {managers.map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.name} ({m.title})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              </>
             )}
 
-            <div className="border-t pt-4 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Login Credentials</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Username <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={form.username}
-                    onChange={e => setForm({ ...form, username: e.target.value })}
-                    placeholder="e.g. john.doe"
-                    autoComplete="off"
-                  />
+            {/* ===== HR ADMIN: Department, Job Title, Manager, Contact Info ===== */}
+            {isHrAdmin && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Department <span className="text-destructive">*</span></Label>
+                    {departmentOptions.length > 0 ? (
+                      <Select value={form.department} onValueChange={v => setForm({ ...form, department: v, title: '' })}>
+                        <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                        <SelectContent>
+                          {departmentOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input value={form.department} onChange={e => setForm({ ...form, department: e.target.value, title: '' })} placeholder="Enter department" />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Job Title <span className="text-destructive">*</span></Label>
+                    {titleOptions.length > 0 ? (
+                      <Select value={form.title} onValueChange={v => setForm({ ...form, title: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select title" /></SelectTrigger>
+                        <SelectContent>
+                          {titleOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={form.department ? 'Enter title' : 'Select department first'} />
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Password {!editingId && <span className="text-destructive">*</span>}</Label>
-                  <Input
-                    type="password"
-                    value={form.password || ''}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                    placeholder={editingId ? 'Leave blank to keep current password' : 'Set password'}
-                    autoComplete="new-password"
-                  />
-                </div>
-              </div>
-            </div>
 
-            <div className="border-t pt-4 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Contact Info</h3>
-              <p className="text-xs text-muted-foreground -mt-2">Used for notifications only — not for login.</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Email <span className="text-destructive">*</span></Label>
-                  <Input
-                    type="email"
-                    value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
-                    placeholder="user@company.com"
-                  />
+                {form.role === 'employee' && (
+                  <div className="space-y-2">
+                    <Label>Manager</Label>
+                    <Select value={form.managerId} onValueChange={v => setForm({ ...form, managerId: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {managers.map(m => (
+                          <SelectItem key={m.id} value={m.id}>{m.name} ({m.title || 'No title'})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="border-t pt-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Contact Info</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={form.email}
+                        onChange={e => setForm({ ...form, email: e.target.value })}
+                        placeholder="user@company.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telephone</Label>
+                      <Input
+                        type="tel"
+                        value={form.telephone}
+                        onChange={e => setForm({ ...form, telephone: e.target.value })}
+                        placeholder="+1-555-0100"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Telephone</Label>
-                  <Input
-                    type="tel"
-                    value={form.telephone}
-                    onChange={e => setForm({ ...form, telephone: e.target.value })}
-                    placeholder="+1-555-0100"
-                  />
+
+                <div className="border-t pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    Role and login credentials are managed by System Admin.
+                  </p>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingId ? 'Save Changes' : 'Create User'}</Button>
+            <Button onClick={handleSave}>
+              {editingId ? 'Save Changes' : 'Create User'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
