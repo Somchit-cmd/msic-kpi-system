@@ -125,11 +125,6 @@ export function AppSidebar() {
               <ChevronDown className="h-4 w-4 text-white/40" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={() => setCurrentRole('employee')}>Switch to Employee</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCurrentRole('manager')}>Switch to Manager</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCurrentRole('president')}>Switch to President</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCurrentRole('admin')}>Switch to HR Admin</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCurrentRole('superadmin')}>Switch to System Admin</DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out

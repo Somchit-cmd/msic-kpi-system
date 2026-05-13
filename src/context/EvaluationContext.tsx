@@ -12,7 +12,7 @@ interface EvaluationContextType {
   evaluations: Evaluation[];
   settings: AppSettings;
   loading: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   setCurrentRole: (role: Role) => void;
   addEvaluation: (eval_: Evaluation) => Promise<void>;
@@ -198,12 +198,12 @@ export function EvaluationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   // Auth
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string, rememberMe?: boolean) => {
     try {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, rememberMe }),
       });
       if (res.ok) {
         const user = await res.json();

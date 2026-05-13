@@ -2,10 +2,11 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 const SESSION_COOKIE = 'kpi_session';
-const COOKIE_MAX_AGE = 86400; // 24 hours
+const COOKIE_MAX_AGE = 86400; // 24 hours (default)
+const COOKIE_MAX_AGE_REMEMBER = 2592000; // 30 days (remember me)
 
 export async function POST(req: NextRequest) {
-  const { username, password } = await req.json();
+  const { username, password, rememberMe } = await req.json();
 
   const user = await db.user.findUnique({ where: { username } });
   if (!user || user.password !== password) {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   response.cookies.set(SESSION_COOKIE, user.id, {
     httpOnly: true,
     path: '/',
-    maxAge: COOKIE_MAX_AGE,
+    maxAge: rememberMe ? COOKIE_MAX_AGE_REMEMBER : COOKIE_MAX_AGE,
     sameSite: 'lax',
   });
   return response;

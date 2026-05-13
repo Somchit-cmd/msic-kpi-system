@@ -7,16 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
-
-const demoCredentials = [
-  { label: 'Employee', username: 'sarah.johnson', password: 'employee123' },
-  { label: 'Employee (Evaluator)', username: 'james.wilson', password: 'employee123' },
-  { label: 'Manager', username: 'michael.chen', password: 'manager123' },
-  { label: 'President', username: 'robert.tanaka', password: 'president123' },
-  { label: 'HR Admin', username: 'lisa.park', password: 'hradmin123' },
-  { label: 'System Admin', username: 'david.kim', password: 'sysadmin123' },
-];
 
 export default function Login() {
   const { login, navigate } = useEvaluation();
@@ -24,7 +16,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
+  const [rememberMe, setRememberMe] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,19 +27,13 @@ export default function Login() {
       return;
     }
     setSubmitting(true);
-    const result = await login(username, password);
+    const result = await login(username, password, rememberMe);
     setSubmitting(false);
     if (result.success) {
       navigate('/');
     } else {
       setError(result.error ?? 'Login failed');
     }
-  };
-
-  const fillDemo = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    setError('');
   };
 
   return (
@@ -108,30 +94,16 @@ export default function Login() {
                   </button>
                 </div>
               </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                />
+                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">Remember me</Label>
+              </div>
               <Button type="submit" className="w-full" disabled={submitting}>{submitting ? 'Signing in...' : 'Sign In'}</Button>
             </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Demo Accounts</CardTitle>
-            <CardDescription className="text-xs">Click to autofill credentials</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {demoCredentials.map((d) => (
-              <button
-                key={d.username}
-                type="button"
-                onClick={() => fillDemo(d.username, d.password)}
-                className="w-full text-left p-2 rounded-md border border-border hover:border-primary/40 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">{d.label}</span>
-                  <span className="text-xs text-muted-foreground font-mono">{d.username}</span>
-                </div>
-              </button>
-            ))}
           </CardContent>
         </Card>
       </div>
