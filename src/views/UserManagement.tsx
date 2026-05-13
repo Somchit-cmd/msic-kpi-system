@@ -230,17 +230,18 @@ export default function UserManagement() {
         toast.error('Username taken', { description: 'This username is already in use.' });
         return;
       }
+      const existingUser = users.find(u => u.id === editingId);
       const payload: User = {
         id: editingId,
         name: form.name.trim(),
-        title: form.title, // keep existing
-        department: form.department, // keep existing
+        title: existingUser?.title ?? '', // keep existing — managed by HR Admin
+        department: existingUser?.department ?? '', // keep existing — managed by HR Admin
         role: form.role,
-        managerId: form.role === 'employee' && form.managerId ? form.managerId : null,
+        managerId: existingUser?.managerId ?? null, // keep existing — managed by HR Admin
         username: form.username.trim(),
         password: form.password?.trim() || undefined,
-        email: form.email, // keep existing
-        telephone: form.telephone, // keep existing
+        email: existingUser?.email ?? '', // keep existing — managed by HR Admin
+        telephone: existingUser?.telephone ?? '', // keep existing — managed by HR Admin
       };
       updateUser(payload);
       toast.success('User updated', { description: `${payload.name} has been updated.` });
@@ -451,7 +452,7 @@ export default function UserManagement() {
               <>
                 <div className="space-y-2">
                   <Label>Role <span className="text-destructive">*</span></Label>
-                  <Select value={form.role} onValueChange={(v: Role) => setForm({ ...form, role: v, managerId: '' })}>
+                  <Select value={form.role} onValueChange={(v: Role) => setForm({ ...form, role: v })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -462,22 +463,6 @@ export default function UserManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {form.role === 'employee' && (
-                  <div className="space-y-2">
-                    <Label>Manager</Label>
-                    <Select value={form.managerId} onValueChange={v => setForm({ ...form, managerId: v })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a manager" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {managers.map(m => (
-                          <SelectItem key={m.id} value={m.id}>{m.name} ({m.title || 'No title'})</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 <div className="border-t pt-4 space-y-4">
                   <h3 className="text-sm font-semibold text-foreground">Login Credentials</h3>
