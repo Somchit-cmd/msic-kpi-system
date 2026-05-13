@@ -406,7 +406,7 @@ export default function UserManagement() {
                   </SelectTrigger>
                   <SelectContent>
                     {managers.map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.name} ({roleLabels[m.role]})</SelectItem>
+                      <SelectItem key={m.id} value={m.id}>{m.name} ({m.title})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
