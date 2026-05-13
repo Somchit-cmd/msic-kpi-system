@@ -153,8 +153,12 @@ export default function UserManagement() {
       toast.error('Missing fields', { description: 'Name, title, and department are required.' });
       return;
     }
-    if (!form.username.trim() || !form.password.trim()) {
-      toast.error('Missing credentials', { description: 'Username and password are required for login.' });
+    if (!form.username.trim()) {
+      toast.error('Missing credentials', { description: 'Username is required for login.' });
+      return;
+    }
+    if (!editingId && !form.password?.trim()) {
+      toast.error('Missing credentials', { description: 'Password is required for new users.' });
       return;
     }
     if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
@@ -175,7 +179,7 @@ export default function UserManagement() {
       canEvaluate: form.role === 'employee' ? form.canEvaluate : false,
       managerId: (form.role === 'employee' || form.role === 'manager') && form.managerId ? form.managerId : null,
       username: form.username.trim(),
-      password: form.password,
+      password: form.password?.trim() || undefined, // only send if changed
       email: form.email.trim(),
       telephone: form.telephone.trim(),
     };
@@ -446,12 +450,12 @@ export default function UserManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Password <span className="text-destructive">*</span></Label>
+                  <Label>Password {!editingId && <span className="text-destructive">*</span>}</Label>
                   <Input
-                    type="text"
-                    value={form.password}
+                    type="password"
+                    value={form.password || ''}
                     onChange={e => setForm({ ...form, password: e.target.value })}
-                    placeholder="Set password"
+                    placeholder={editingId ? 'Leave blank to keep current password' : 'Set password'}
                     autoComplete="new-password"
                   />
                 </div>

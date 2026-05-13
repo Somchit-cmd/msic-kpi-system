@@ -27,9 +27,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();
-  // Hash password if it's being updated
+  // Hash password if it's being updated; remove password field if not provided
   if (body.password) {
     body.password = await bcrypt.hash(body.password, 10);
+  } else {
+    delete body.password; // don't overwrite existing password with undefined/null
   }
   const user = await db.user.update({ where: { id }, data: body });
   return NextResponse.json(user);
