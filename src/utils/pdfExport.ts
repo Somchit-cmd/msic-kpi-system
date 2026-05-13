@@ -33,7 +33,7 @@ export function generatePDF(eval_: Evaluation) {
     ['Name', eval_.employeeName],
     ['Title', eval_.employeeTitle],
     ['Department', eval_.department],
-    ['Manager', eval_.managerName],
+    ['Evaluator', eval_.managerName],
     ['Period', eval_.period],
   ];
   info.forEach(([label, value]) => {
@@ -51,7 +51,7 @@ export function generatePDF(eval_: Evaluation) {
 
   autoTable(doc, {
     startY: y,
-    head: [['#', 'Objective', 'Category', 'Weight', 'Self', 'Manager']],
+    head: [['#', 'Objective', 'Category', 'Weight', 'Self', 'Evaluator']],
     body: eval_.objectives.map((o, i) => [
       String(i + 1),
       o.description,
@@ -79,7 +79,7 @@ export function generatePDF(eval_: Evaluation) {
 
   autoTable(doc, {
     startY: y,
-    head: [['Behavior', 'Self Score', 'Manager Score']],
+    head: [['Behavior', 'Self Score', 'Evaluator Score']],
     body: eval_.behaviors.map(b => [b.name, String(b.selfScore), String(b.managerScore)]),
     styles: { fontSize: 8 },
     headStyles: { fillColor: [30, 45, 80] },
@@ -101,7 +101,7 @@ export function generatePDF(eval_: Evaluation) {
 
   autoTable(doc, {
     startY: y,
-    head: [['', 'Self Score', 'Manager Score']],
+    head: [['', 'Self Score', 'Evaluator Score']],
     body: [['Adjusting Factor', String(eval_.adjustingFactor.selfScore), String(eval_.adjustingFactor.managerScore)]],
     styles: { fontSize: 8 },
     headStyles: { fillColor: [30, 45, 80] },
@@ -198,7 +198,7 @@ export function generatePDF(eval_: Evaluation) {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const sigWidth = (pageWidth - 42) / 3;
-  ['Employee Signature', 'Manager Signature', 'HR Signature'].forEach((label, i) => {
+  ['Employee Signature', 'Evaluator Signature', 'HR Signature'].forEach((label, i) => {
     const x = 14 + i * (sigWidth + 7);
     doc.line(x, y + 15, x + sigWidth, y + 15);
     doc.text(label, x, y + 20);

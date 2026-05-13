@@ -13,7 +13,7 @@ export default function Team() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <UsersIcon className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground">Team view is available for managers, evaluators, and HR only.</p>
+        <p className="text-muted-foreground">Team view is available for evaluators and HR only.</p>
       </div>
     );
   }

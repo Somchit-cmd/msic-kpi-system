@@ -64,7 +64,7 @@ export default function NewQuarterlyReview() {
       isLeadership: plan.isLeadership,
       auditLog: [
         { timestamp: nowIso, action: 'Draft Created', toStatus: 'draft', actorId: currentUser.id, actorName: currentUser.name, actorRole: currentUser.role },
-        ...(submit ? [{ timestamp: nowIso, action: 'Submitted to Manager', fromStatus: 'draft' as const, toStatus: 'submitted' as const, actorId: currentUser.id, actorName: currentUser.name, actorRole: currentUser.role }] : []),
+        ...(submit ? [{ timestamp: nowIso, action: 'Submitted to Evaluator', fromStatus: 'draft' as const, toStatus: 'submitted' as const, actorId: currentUser.id, actorName: currentUser.name, actorRole: currentUser.role }] : []),
       ],
     };
     addEvaluation(eval_);
@@ -156,7 +156,7 @@ export default function NewQuarterlyReview() {
 
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button variant="outline" onClick={() => save(false)}>Save Draft</Button>
-        <Button onClick={() => save(true)}>Submit to Manager</Button>
+        <Button onClick={() => save(true)}>Submit to Evaluator</Button>
       </div>
     </div>
   );

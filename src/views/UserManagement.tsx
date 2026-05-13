@@ -357,7 +357,7 @@ export default function UserManagement() {
                   <th className="pb-2 font-medium">Email</th>
                   <th className="pb-2 font-medium">Telephone</th>
                   <th className="pb-2 font-medium">Role</th>
-                  <th className="pb-2 font-medium">Manager</th>
+                  <th className="pb-2 font-medium">Evaluator</th>
                   <th className="pb-2 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -536,10 +536,10 @@ export default function UserManagement() {
 
                 {form.role === 'employee' && (
                   <div className="space-y-2">
-                    <Label>Manager</Label>
+                    <Label>Evaluator</Label>
                     <Select value={form.managerId || undefined} onValueChange={v => setForm({ ...form, managerId: v })}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a manager" />
+                        <SelectValue placeholder="Select an evaluator" />
                       </SelectTrigger>
                       <SelectContent>
                         {managers.map(m => (

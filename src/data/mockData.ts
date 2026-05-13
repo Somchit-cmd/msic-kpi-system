@@ -118,8 +118,8 @@ export const mockEvaluations: Evaluation[] = [
     isLeadership: false,
     auditLog: [
       { timestamp: '2025-09-01T09:15:00Z', action: 'Draft Created', toStatus: 'draft', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
-      { timestamp: '2025-09-28T16:40:00Z', action: 'Submitted to Manager', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
-      { timestamp: '2025-10-05T11:20:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
+      { timestamp: '2025-09-28T16:40:00Z', action: 'Submitted to Evaluator', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
+      { timestamp: '2025-10-05T11:20:00Z', action: 'Evaluator Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
     ],
   },
   {
@@ -144,8 +144,8 @@ export const mockEvaluations: Evaluation[] = [
     isLeadership: false,
     auditLog: [
       { timestamp: '2025-09-05T10:00:00Z', action: 'Draft Created', toStatus: 'draft', actorId: 'emp3', actorName: 'Emily Davis', actorRole: 'employee' },
-      { timestamp: '2025-09-30T14:25:00Z', action: 'Submitted to Manager', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp3', actorName: 'Emily Davis', actorRole: 'employee' },
-      { timestamp: '2025-10-08T09:50:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
+      { timestamp: '2025-09-30T14:25:00Z', action: 'Submitted to Evaluator', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp3', actorName: 'Emily Davis', actorRole: 'employee' },
+      { timestamp: '2025-10-08T09:50:00Z', action: 'Evaluator Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
     ],
   },
   {
@@ -170,8 +170,8 @@ export const mockEvaluations: Evaluation[] = [
     isLeadership: false,
     auditLog: [
       { timestamp: '2025-03-01T08:30:00Z', action: 'Draft Created', toStatus: 'draft', actorId: 'emp2', actorName: 'James Wilson', actorRole: 'employee' },
-      { timestamp: '2025-03-25T17:10:00Z', action: 'Submitted to Manager', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp2', actorName: 'James Wilson', actorRole: 'employee' },
-      { timestamp: '2025-04-05T13:00:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
+      { timestamp: '2025-03-25T17:10:00Z', action: 'Submitted to Evaluator', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp2', actorName: 'James Wilson', actorRole: 'employee' },
+      { timestamp: '2025-04-05T13:00:00Z', action: 'Evaluator Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
       { timestamp: '2025-04-15T10:45:00Z', action: 'HR Approved & Finalized', fromStatus: 'manager_scored', toStatus: 'hr_approved', actorId: 'hr1', actorName: 'Lisa Park', actorRole: 'admin', notes: 'Approved for promotion review.' },
     ],
   },
@@ -197,8 +197,8 @@ export const mockEvaluations: Evaluation[] = [
     isLeadership: false,
     auditLog: [
       { timestamp: '2025-03-02T09:00:00Z', action: 'Draft Created', toStatus: 'draft', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
-      { timestamp: '2025-03-28T15:20:00Z', action: 'Submitted to Manager', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
-      { timestamp: '2025-04-08T11:00:00Z', action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
+      { timestamp: '2025-03-28T15:20:00Z', action: 'Submitted to Evaluator', fromStatus: 'draft', toStatus: 'submitted', actorId: 'emp1', actorName: 'Sarah Johnson', actorRole: 'employee' },
+      { timestamp: '2025-04-08T11:00:00Z', action: 'Evaluator Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: 'mgr1', actorName: 'Michael Chen', actorRole: 'employee' },
       { timestamp: '2025-04-18T14:30:00Z', action: 'HR Approved & Finalized', fromStatus: 'manager_scored', toStatus: 'hr_approved', actorId: 'hr1', actorName: 'Lisa Park', actorRole: 'admin', notes: 'Filed to employee record.' },
     ],
   },

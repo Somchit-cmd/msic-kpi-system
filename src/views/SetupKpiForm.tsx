@@ -237,7 +237,7 @@ export default function SetupKpiForm() {
               : isHrView
                 ? 'Final review before the KPI plan is approved.'
                 : isEmployee
-                  ? `Set up your ${title} plan. Your manager will add rating criteria after submission.`
+                  ? `Set up your ${title} plan. Your evaluator will add rating criteria after submission.`
                   : isQuarterly
                     ? 'Pick objectives from a Performance KPI plan.'
                     : 'Define Part I objectives and Part III adjusting criteria.'}
@@ -252,7 +252,7 @@ export default function SetupKpiForm() {
           <CardContent className="pt-4 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-destructive">Manager Rejected — Feedback:</p>
+              <p className="text-sm font-medium text-destructive">Evaluator Rejected — Feedback:</p>
               <p className="text-sm text-muted-foreground mt-1">{existing.managerFeedback}</p>
               <p className="text-xs text-muted-foreground mt-2">Please edit and resubmit your KPI plan.</p>
             </div>
@@ -483,7 +483,7 @@ export default function SetupKpiForm() {
                           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
                           <p className="text-xs font-medium text-muted-foreground">
                             Criteria of Rating {canAddScoreCriteria && <span className="text-destructive">(Required — fill in before approving)</span>}
-                            {!canAddScoreCriteria && !canEditObjectives && obj.scoreCriteria.every(sc => !sc.description) && <span className="text-muted-foreground italic">(Pending manager review)</span>}
+                            {!canAddScoreCriteria && !canEditObjectives && obj.scoreCriteria.every(sc => !sc.description) && <span className="text-muted-foreground italic">(Pending evaluator review)</span>}
                           </p>
                         </CollapsibleTrigger>
                         <CollapsibleContent className="mt-2">
@@ -532,11 +532,11 @@ export default function SetupKpiForm() {
         </Tabs>
       )}
 
-      {/* Manager Review Panel */}
+      {/* Evaluator Review Panel */}
       {canAddScoreCriteria && (
         <Card className="border-warning/50">
           <CardHeader>
-            <CardTitle className="text-base">Manager Review</CardTitle>
+            <CardTitle className="text-base">Evaluator Review</CardTitle>
             <CardDescription>Add Criteria of Rating for each objective above, then approve or reject.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -576,7 +576,7 @@ export default function SetupKpiForm() {
             </div>
             {existing.managerFeedback && (
               <div className="text-sm">
-                <span className="text-muted-foreground">Manager Feedback: </span>
+                <span className="text-muted-foreground">Evaluator Feedback: </span>
                 <span>{existing.managerFeedback}</span>
               </div>
             )}

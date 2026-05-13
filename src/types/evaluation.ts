@@ -89,7 +89,7 @@ export interface AdjustingFactor {
 
 export interface AuditLogEntry {
   timestamp: string; // ISO datetime
-  action: string; // e.g. "Draft Created", "Submitted to Manager", "Manager Scored", "HR Signed Off"
+  action: string; // e.g. "Draft Created", "Submitted to Evaluator", "Evaluator Scored", "HR Signed Off"
   fromStatus?: EvalStatus;
   toStatus?: EvalStatus;
   actorId: string;
@@ -378,15 +378,15 @@ export const LEADERSHIP_BEHAVIOR = 'Leadership';
 export const STATUS_LABELS: Record<EvalStatus, string> = {
   draft: 'Draft',
   submitted: 'Submitted',
-  manager_scored: 'Manager Scored',
+  manager_scored: 'Evaluator Scored',
   hr_approved: 'HR Approved',
   hr_rejected: 'HR Rejected',
 };
 
 export const SETUP_STATUS_LABELS: Record<SetupStatus, string> = {
   draft: 'Draft',
-  submitted: 'Pending Manager Review',
-  manager_rejected: 'Manager Rejected',
+  submitted: 'Pending Evaluator Review',
+  manager_rejected: 'Evaluator Rejected',
   manager_approved: 'Pending HR Review',
   hr_rejected: 'HR Rejected',
   hr_approved: 'Approved',

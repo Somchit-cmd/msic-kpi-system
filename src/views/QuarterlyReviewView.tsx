@@ -47,9 +47,9 @@ export default function QuarterlyReviewView() {
     const nowIso = new Date().toISOString();
     updateEvaluation({
       ...eval_, objectives: objs, status: 'manager_scored', updatedAt: nowIso.split('T')[0],
-      auditLog: [...(eval_.auditLog || []), { timestamp: nowIso, action: 'Manager Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: currentUser.id, actorName: currentUser.name, actorRole: currentUser.role }],
+      auditLog: [...(eval_.auditLog || []), { timestamp: nowIso, action: 'Evaluator Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: currentUser.id, actorName: currentUser.name, actorRole: currentUser.role }],
     });
-    toast.success('Manager scores submitted!');
+    toast.success('Evaluator scores submitted!');
     navigate('/quarterly-reviews');
   };
 
@@ -78,7 +78,7 @@ export default function QuarterlyReviewView() {
 
       <div className="grid grid-cols-2 gap-3">
         <Card><CardContent className="pt-4 pb-3 text-center"><p className="text-xs text-muted-foreground">Self Avg</p><p className="text-2xl font-bold">{selfAvg.toFixed(1)}%</p></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-3 text-center"><p className="text-xs text-muted-foreground">Manager Avg</p><p className="text-2xl font-bold text-primary">{useManager || canScore ? `${managerAvg.toFixed(1)}%` : '—'}</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3 text-center"><p className="text-xs text-muted-foreground">Evaluator Avg</p><p className="text-2xl font-bold text-primary">{useManager || canScore ? `${managerAvg.toFixed(1)}%` : '—'}</p></CardContent></Card>
       </div>
 
       <Card>
@@ -92,7 +92,7 @@ export default function QuarterlyReviewView() {
                   <th className="pb-2 font-medium">Objective</th>
                   <th className="pb-2 font-medium">Weight</th>
                   <th className="pb-2 font-medium">Self %</th>
-                  <th className="pb-2 font-medium">Manager %</th>
+                  <th className="pb-2 font-medium">Evaluator %</th>
                 </tr>
               </thead>
               <tbody>
@@ -122,7 +122,7 @@ export default function QuarterlyReviewView() {
 
       {canScore && (
         <div className="flex justify-end pt-4 border-t">
-          <Button onClick={submitManager}>Submit Manager Scores</Button>
+          <Button onClick={submitManager}>Submit Evaluator Scores</Button>
         </div>
       )}
       {canSignOff && (

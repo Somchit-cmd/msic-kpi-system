@@ -72,7 +72,7 @@ export default function EvaluationView() {
         ...(eval_.auditLog || []),
         {
           timestamp: nowIso,
-          action: 'Manager Scored & Sent to HR',
+          action: 'Evaluator Scored & Sent to HR',
           fromStatus: 'submitted',
           toStatus: 'manager_scored',
           actorId: currentUser.id,
@@ -81,7 +81,7 @@ export default function EvaluationView() {
         },
       ],
     });
-    toast.success('Manager scores submitted!');
+    toast.success('Evaluator scores submitted!');
     navigate('/');
   };
 
@@ -220,7 +220,7 @@ export default function EvaluationView() {
                   <th className="pb-2 font-medium">Category</th>
                   <th className="pb-2 font-medium">Weight</th>
                   <th className="pb-2 font-medium">Self</th>
-                  <th className="pb-2 font-medium">Manager</th>
+                  <th className="pb-2 font-medium">Evaluator</th>
                 </tr>
               </thead>
               <tbody>
@@ -290,7 +290,7 @@ export default function EvaluationView() {
                         <p className="font-bold">{st.selfScore || '—'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Manager</p>
+                        <p className="text-xs text-muted-foreground mb-1">Evaluator</p>
                         {canScore ? (
                           <ScoreButtons
                             value={displayBehaviors.find(b => b.subTopicId === st.id)?.managerScore || 0}
@@ -319,7 +319,7 @@ export default function EvaluationView() {
               <p className="font-bold text-lg">{displayAdjusting.selfScore || '—'}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Manager Score</p>
+              <p className="text-xs text-muted-foreground mb-1">Evaluator Score</p>
               {canScore ? (
                 <ScoreButtons
                   value={managerAdjusting.managerScore}
@@ -339,10 +339,10 @@ export default function EvaluationView() {
         </CardContent>
       </Card>
 
-      {/* Manager submit */}
+      {/* Evaluator submit */}
       {canScore && (
         <div className="flex justify-end pt-4 border-t">
-          <Button onClick={submitManagerScores}>Submit Manager Scores</Button>
+          <Button onClick={submitManagerScores}>Submit Evaluator Scores</Button>
         </div>
       )}
 
@@ -363,7 +363,7 @@ export default function EvaluationView() {
             <div className="space-y-1.5">
               <p className="text-sm font-medium">Rejection Feedback <span className="text-xs text-muted-foreground">(required if rejecting)</span></p>
               <Textarea
-                placeholder="Feedback for employee and manager (required for rejection)..."
+                placeholder="Feedback for employee and evaluator (required for rejection)..."
                 value={hrRejectFeedback}
                 onChange={e => setHrRejectFeedback(e.target.value)}
                 rows={2}

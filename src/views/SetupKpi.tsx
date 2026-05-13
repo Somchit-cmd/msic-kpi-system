@@ -129,7 +129,7 @@ export default function SetupKpi() {
     <div className="space-y-6 w-full">
       <div>
         <h1 className="text-2xl font-bold">Setup KPI</h1>
-        <p className="text-muted-foreground mt-1">Set up Performance KPI first; Quarterly KPI selects objectives from a Performance plan. After submission, your manager will add rating criteria before HR final approval.</p>
+        <p className="text-muted-foreground mt-1">Set up Performance KPI first; Quarterly KPI selects objectives from a Performance plan. After submission, your evaluator will add rating criteria before HR final approval.</p>
       </div>
 
       <Card>
