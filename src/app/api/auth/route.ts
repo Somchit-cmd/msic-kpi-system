@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 
 const SESSION_COOKIE = 'kpi_session';
 const COOKIE_MAX_AGE = 86400; // 24 hours (default)
@@ -9,12 +10,31 @@ export async function POST(req: NextRequest) {
   const { username, password, rememberMe } = await req.json();
 
   const user = await db.user.findUnique({ where: { username } });
-  if (!user || user.password !== password) {
+  if (!user) {
     return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
   }
 
-  // Set session cookie with user ID
-  const response = NextResponse.json(user);
+  // Support both hashed and plain text passwords during migration period
+  let passwordValid = false;
+  if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+    // Password is already hashed with bcrypt
+    passwordValid = await bcrypt.compare(password, user.password);
+  } else {
+    // Legacy plain text password — verify and auto-upgrade to hash
+    passwordValid = user.password === password;
+    if (passwordValid) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await db.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+    }
+  }
+
+  if (!passwordValid) {
+    return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
+  }
+
+  // Set session cookie with user ID (exclude password from response)
+  const { password: _, ...userWithoutPassword } = user;
+  const response = NextResponse.json(userWithoutPassword);
   response.cookies.set(SESSION_COOKIE, user.id, {
     httpOnly: true,
     path: '/',
@@ -36,7 +56,9 @@ export async function GET(req: NextRequest) {
     response.cookies.set(SESSION_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 });
     return response;
   }
-  return NextResponse.json(user);
+  // Exclude password from response
+  const { password: _, ...userWithoutPassword } = user;
+  return NextResponse.json(userWithoutPassword);
 }
 
 // DELETE — logout (clear session cookie)
