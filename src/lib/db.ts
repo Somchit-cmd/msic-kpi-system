@@ -4,19 +4,15 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Supabase pooler URL for runtime connections (port 6543 with pgbouncer)
-const SUPABASE_POOLER_URL = 'postgresql://postgres.wtogscfvsjcvtxhwgudw:QlSB4eRHspVsHFKF@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true'
-
-// Fix system-level DATABASE_URL that might point to old SQLite
-const envUrl = process.env.DATABASE_URL || ''
-if (!envUrl.startsWith('postgresql://') && !envUrl.startsWith('postgres://')) {
-  process.env.DATABASE_URL = SUPABASE_POOLER_URL
-}
+// Use environment variables — set these in Netlify dashboard
+// DATABASE_URL = Supabase pooler URL (port 6543 with pgbouncer=true)
+// DIRECT_URL  = Supabase direct URL (port 5432, for migrations)
+const databaseUrl = process.env.DATABASE_URL || ''
 
 export const db = globalForPrisma.prisma ??
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-    datasourceUrl: SUPABASE_POOLER_URL,
+    datasourceUrl: databaseUrl || undefined,
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
