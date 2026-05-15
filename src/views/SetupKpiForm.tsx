@@ -581,91 +581,106 @@ export default function SetupKpiForm() {
               </p>
             </div>
 
-            {objectives.map((obj, i) => (
-              <Card key={obj.id}>
-                <CardContent className="pt-4 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-sm font-bold text-muted-foreground mt-2 w-6">{i + 1}.</span>
-                    <div className="flex-1 space-y-4">
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-medium text-muted-foreground">Objective Description</p>
-                        <Textarea
-                          value={obj.description}
-                          onChange={e => updateObjective(obj.id, 'description', e.target.value)}
-                          className="min-h-[60px]"
-                          disabled={!canEditObjectives}
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-medium text-muted-foreground">Strategy (How to Achieve)</p>
-                          <Textarea
-                            value={obj.strategy}
-                            onChange={e => updateObjective(obj.id, 'strategy', e.target.value)}
-                            className="min-h-[60px]"
+            {/* Compact objective list */}
+            <div className="space-y-2">
+              {objectives.map((obj, i) => {
+                // Track open state manually so we can toggle from the chevron area
+                const defaultOpen = canAddScoreCriteria || (canEditObjectives && !obj.description.trim());
+                return (
+                <Collapsible key={obj.id} defaultOpen={defaultOpen}>
+                  <Card className="overflow-hidden">
+                    {/* Compact header row — always visible, NOT a button to avoid nested button errors */}
+                    <div className="flex items-center gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors">
+                      <CollapsibleTrigger asChild>
+                        <button type="button" className="flex items-center gap-2 shrink-0 cursor-pointer" aria-label="Toggle objective details">
+                          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                          <span className="text-sm font-bold text-muted-foreground w-6">{i + 1}.</span>
+                        </button>
+                      </CollapsibleTrigger>
+                      <div className="flex-1 min-w-0">
+                        {canEditObjectives ? (
+                          <Input
+                            value={obj.description}
+                            onChange={e => updateObjective(obj.id, 'description', e.target.value)}
+                            placeholder="Objective description..."
+                            className="h-7 text-sm border-0 shadow-none focus-visible:ring-0 px-0 bg-transparent"
                             disabled={!canEditObjectives}
                           />
-                        </div>
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-medium text-muted-foreground">Support Needed</p>
-                          <Textarea
-                            value={obj.supportNeeded}
-                            onChange={e => updateObjective(obj.id, 'supportNeeded', e.target.value)}
-                            className="min-h-[60px]"
-                            disabled={!canEditObjectives}
-                          />
-                        </div>
+                        ) : (
+                          <p className="text-sm truncate">{obj.description || <span className="text-muted-foreground italic">No description</span>}</p>
+                        )}
                       </div>
-                      <div className="flex gap-3 flex-wrap">
-                        <Select value={obj.category} onValueChange={v => updateObjective(obj.id, 'category', v)} disabled={!canEditObjectives}>
-                          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {objectiveCategories.map(cat => (
-                              <SelectItem key={cat.toLowerCase()} value={cat.toLowerCase()}>{cat}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Weight:</span>
-                          <Input type="number" min={0} max={100} className="w-20" value={obj.weight} onChange={e => updateObjective(obj.id, 'weight', Number(e.target.value))} disabled={!canEditObjectives} />
-                          <span className="text-sm text-muted-foreground">%</span>
-                        </div>
+                      <Select value={obj.category} onValueChange={v => updateObjective(obj.id, 'category', v)} disabled={!canEditObjectives}>
+                        <SelectTrigger className="w-28 h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {objectiveCategories.map(cat => (
+                            <SelectItem key={cat.toLowerCase()} value={cat.toLowerCase()}>{cat}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Input type="number" min={0} max={100} className="w-16 h-7 text-xs text-center" value={obj.weight} onChange={e => updateObjective(obj.id, 'weight', Number(e.target.value))} disabled={!canEditObjectives} />
+                        <span className="text-xs text-muted-foreground">%</span>
                       </div>
+                      {canEditObjectives && objectives.length > 2 && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => setDeleteObjId(obj.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
 
-                      {/* Criteria of Rating — visible to all, editable only by manager during review */}
-                      <Collapsible defaultOpen={canAddScoreCriteria}>
-                        <CollapsibleTrigger className="flex items-center gap-2 text-left group">
-                          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                    {/* Expanded details — strategy, support, criteria */}
+                    <CollapsibleContent>
+                      <div className="border-t px-4 py-3 space-y-3 bg-muted/10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Strategy (How to Achieve)</p>
+                            <Textarea
+                              value={obj.strategy}
+                              onChange={e => updateObjective(obj.id, 'strategy', e.target.value)}
+                              className="min-h-[48px] text-sm"
+                              disabled={!canEditObjectives}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Support Needed</p>
+                            <Textarea
+                              value={obj.supportNeeded}
+                              onChange={e => updateObjective(obj.id, 'supportNeeded', e.target.value)}
+                              className="min-h-[48px] text-sm"
+                              disabled={!canEditObjectives}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Criteria of Rating */}
+                        <div className="space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">
                             Criteria of Rating {canAddScoreCriteria && <span className="text-destructive">(Required — fill in before approving)</span>}
-                            {!canAddScoreCriteria && !canEditObjectives && obj.scoreCriteria.every(sc => !sc.description) && <span className="text-muted-foreground italic">(Pending evaluator review)</span>}
+                            {!canAddScoreCriteria && !canEditObjectives && obj.scoreCriteria.every(sc => !sc.description) && <span className="italic"> (Pending evaluator review)</span>}
                           </p>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="mt-2">
-                          <div className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 bg-muted/30">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
                             {obj.scoreCriteria.map(sc => (
-                              <div key={sc.score} className="flex items-start gap-2">
-                                <span className="text-xs font-bold text-muted-foreground mt-2 w-24 shrink-0">Score {sc.score} — {SCORE_LABELS[sc.score]}</span>
+                              <div key={sc.score} className="rounded-md border border-border p-2 bg-muted/20">
+                                <p className="text-[10px] font-bold text-muted-foreground mb-1">Score {sc.score} — {SCORE_LABELS[sc.score]}</p>
                                 {canAddScoreCriteria ? (
-                                  <Input value={sc.description} onChange={e => updateScoreCriteria(obj.id, sc.score, e.target.value)} className="text-xs h-8" placeholder="Describe criteria..." />
+                                  <Input value={sc.description} onChange={e => updateScoreCriteria(obj.id, sc.score, e.target.value)} className="text-xs h-7" placeholder="Criteria..." />
                                 ) : (
-                                  <p className="text-xs mt-1.5 text-muted-foreground">{sc.description || '—'}</p>
+                                  <p className="text-xs text-muted-foreground">{sc.description || '—'}</p>
                                 )}
                               </div>
                             ))}
                           </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </div>
-                    {canEditObjectives && objectives.length > 2 && (
-                      <Button variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => setDeleteObjId(obj.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
+                );
+              })}
+            </div>
 
             {/* Add Objective button at bottom for better UX */}
             {canEditObjectives && (
