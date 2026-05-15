@@ -1,37 +1,172 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useEvaluation } from '@/context/EvaluationContext';
 import { calcFinalScore, getGrade, getGradeColor } from '@/types/evaluation';
 import { StatusBadge, SetupStatusBadge } from '@/components/StatusBadge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, CheckCircle, AlertCircle, FileText, CalendarRange, Plus } from 'lucide-react';
+import { ClipboardList, CheckCircle, AlertCircle, FileText, CalendarRange, Plus, ArrowRight, Clock, UserCheck, ShieldCheck, Edit3 } from 'lucide-react';
+
+interface PendingItem {
+  id: string;
+  type: 'kpi_review' | 'kpi_hr_review' | 'kpi_edit' | 'eval_review' | 'eval_hr_review';
+  label: string;
+  description: string;
+  employeeName: string;
+  period: string;
+  badge: React.ReactNode;
+  navigateTo: string;
+  navigateParams: Record<string, string>;
+  icon: React.ElementType;
+  iconColor: string;
+  sortKey: number;
+}
 
 export default function Dashboard() {
-  const { currentUser, hasDirectReports, hasManager, getMyEvaluations, getPendingActions, evaluations, plans, navigate } = useEvaluation();
+  const { currentUser, hasDirectReports, hasManager, getMyEvaluations, evaluations, plans, navigate } = useEvaluation();
   const myEvals = getMyEvaluations();
-  const pending = getPendingActions();
   const completed = myEvals.filter(e => e.status === 'hr_approved');
+
+  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
 
   // KPI Plans for current user
   const myPlans = plans.filter(p => p.employeeId === currentUser.id);
   const myPerformancePlans = myPlans.filter(p => p.planType === 'performance');
   const myQuarterlyPlans = myPlans.filter(p => p.planType === 'quarterly');
-  const pendingPlanActions = myPlans.filter(p => p.setupStatus === 'draft' || p.setupStatus === 'manager_rejected' || p.setupStatus === 'hr_rejected');
+
+  // Build comprehensive pending actions for the current user
+  const pendingItems = useMemo<PendingItem[]>(() => {
+    const items: PendingItem[] = [];
+
+    // 1. KPI Plans submitted to current user as evaluator (need review)
+    if (hasDirectReports) {
+      plans
+        .filter(p => p.managerId === currentUser.id && p.setupStatus === 'submitted')
+        .forEach(p => {
+          items.push({
+            id: `kpi-review-${p.id}`,
+            type: 'kpi_review',
+            label: 'Review KPI Setup',
+            description: `${p.employeeName} submitted a ${p.planType === 'performance' ? 'Performance' : 'Quarterly'} KPI plan for your review`,
+            employeeName: p.employeeName,
+            period: `${p.year} ${p.period ?? ''}`.trim(),
+            badge: <SetupStatusBadge status={p.setupStatus} />,
+            navigateTo: '/setup-kpi/edit',
+            navigateParams: { id: p.id, mode: 'review' },
+            icon: UserCheck,
+            iconColor: 'text-info',
+            sortKey: 1,
+          });
+        });
+    }
+
+    // 2. KPI Plans pending HR review (admin/superadmin)
+    if (isAdmin) {
+      plans
+        .filter(p => p.setupStatus === 'manager_approved')
+        .forEach(p => {
+          items.push({
+            id: `kpi-hr-${p.id}`,
+            type: 'kpi_hr_review',
+            label: 'HR Review KPI Setup',
+            description: `${p.employeeName}'s KPI plan approved by evaluator, needs your HR final review`,
+            employeeName: p.employeeName,
+            period: `${p.year} ${p.period ?? ''}`.trim(),
+            badge: <SetupStatusBadge status={p.setupStatus} />,
+            navigateTo: '/setup-kpi/edit',
+            navigateParams: { id: p.id, mode: 'hr-review' },
+            icon: ShieldCheck,
+            iconColor: 'text-warning',
+            sortKey: 2,
+          });
+        });
+    }
+
+    // 3. Own KPI Plans that need editing (draft or rejected)
+    plans
+      .filter(p => p.employeeId === currentUser.id && (p.setupStatus === 'draft' || p.setupStatus === 'manager_rejected' || p.setupStatus === 'hr_rejected'))
+      .forEach(p => {
+        const isRejected = p.setupStatus === 'manager_rejected' || p.setupStatus === 'hr_rejected';
+        items.push({
+          id: `kpi-edit-${p.id}`,
+          type: 'kpi_edit',
+          label: isRejected ? 'Resubmit KPI Setup' : 'Complete KPI Setup',
+          description: isRejected
+            ? `Your ${p.planType === 'performance' ? 'Performance' : 'Quarterly'} KPI plan was rejected. Review feedback and resubmit.`
+            : `Your ${p.planType === 'performance' ? 'Performance' : 'Quarterly'} KPI plan is still in draft.`,
+          employeeName: currentUser.name,
+          period: `${p.year} ${p.period ?? ''}`.trim(),
+          badge: <SetupStatusBadge status={p.setupStatus} />,
+          navigateTo: '/setup-kpi/edit',
+          navigateParams: { id: p.id },
+          icon: Edit3,
+          iconColor: 'text-destructive',
+          sortKey: isRejected ? 0 : 3,
+        });
+      });
+
+    // 4. Evaluations submitted to current user as manager (need scoring)
+    if (hasDirectReports) {
+      evaluations
+        .filter(e => e.managerId === currentUser.id && e.status === 'submitted')
+        .forEach(e => {
+          items.push({
+            id: `eval-review-${e.id}`,
+            type: 'eval_review',
+            label: 'Score Evaluation',
+            description: `${e.employeeName}'s self-evaluation is ready for your scoring`,
+            employeeName: e.employeeName,
+            period: e.period,
+            badge: <StatusBadge status={e.status} />,
+            navigateTo: '/evaluation',
+            navigateParams: { id: e.id },
+            icon: ClipboardList,
+            iconColor: 'text-info',
+            sortKey: 1,
+          });
+        });
+    }
+
+    // 5. Evaluations pending HR approval (admin/superadmin)
+    if (isAdmin) {
+      evaluations
+        .filter(e => e.status === 'manager_scored')
+        .forEach(e => {
+          items.push({
+            id: `eval-hr-${e.id}`,
+            type: 'eval_hr_review',
+            label: 'HR Approve Evaluation',
+            description: `${e.employeeName}'s evaluation scored by evaluator, needs your HR approval`,
+            employeeName: e.employeeName,
+            period: e.period,
+            badge: <StatusBadge status={e.status} />,
+            navigateTo: '/evaluation',
+            navigateParams: { id: e.id },
+            icon: ShieldCheck,
+            iconColor: 'text-warning',
+            sortKey: 2,
+          });
+        });
+    }
+
+    // Sort: rejected first (0), then reviews (1), then HR reviews (2), then drafts (3)
+    return items.sort((a, b) => a.sortKey - b.sortKey);
+  }, [plans, evaluations, currentUser, hasDirectReports, isAdmin]);
 
   // Top-level evaluator: has direct reports but no manager (like a CEO/president)
   const isTopEvaluator = hasDirectReports && !hasManager;
 
   const stats = isTopEvaluator
     ? [
-        { label: 'Pending Evaluations', value: pending.length, icon: AlertCircle, color: 'text-warning' },
+        { label: 'Pending Actions', value: pendingItems.length, icon: AlertCircle, color: 'text-warning' },
         { label: 'Team Evaluations', value: evaluations.filter(e => e.managerId === currentUser.id).length, icon: ClipboardList, color: 'text-primary' },
         { label: 'Completed', value: evaluations.filter(e => e.managerId === currentUser.id && e.status === 'hr_approved').length, icon: CheckCircle, color: 'text-success' },
       ]
     : [
         { label: 'My Evaluations', value: myEvals.length, icon: ClipboardList, color: 'text-primary' },
         { label: 'My KPI Plans', value: myPlans.length, icon: FileText, color: 'text-info' },
-        { label: 'Pending Actions', value: pending.length + pendingPlanActions.length, icon: AlertCircle, color: 'text-warning' },
+        { label: 'Pending Actions', value: pendingItems.length, icon: AlertCircle, color: 'text-warning' },
         { label: 'Completed', value: completed.length, icon: CheckCircle, color: 'text-success' },
       ];
 
@@ -58,37 +193,41 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {pending.length > 0 && (
+      {/* Pending Actions — comprehensive section */}
+      {pendingItems.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Pending Actions</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Clock className="h-5 w-5 text-warning" />
+              Pending Actions
+            </CardTitle>
+            <CardDescription>Items that require your attention</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="pb-3 font-medium">Employee</th>
-                    <th className="pb-3 font-medium">Period</th>
-                    <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium">Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pending.map(e => (
-                    <tr
-                      key={e.id}
-                      className="border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => navigate('/evaluation', { id: e.id })}
-                    >
-                      <td className="py-3 font-medium">{e.employeeName}</td>
-                      <td className="py-3">{e.period}</td>
-                      <td className="py-3"><StatusBadge status={e.status} /></td>
-                      <td className="py-3 text-muted-foreground">{e.updatedAt}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {pendingItems.map(item => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors group"
+                  onClick={() => navigate(item.navigateTo, item.navigateParams)}
+                >
+                  <div className={`shrink-0 p-2 rounded-full bg-muted ${item.iconColor}`}>
+                    <item.icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium">{item.label}</p>
+                      {item.badge}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.description}</p>
+                  </div>
+                  <div className="shrink-0 text-right hidden sm:block">
+                    <p className="text-xs text-muted-foreground">{item.employeeName}</p>
+                    <p className="text-xs text-muted-foreground">{item.period}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

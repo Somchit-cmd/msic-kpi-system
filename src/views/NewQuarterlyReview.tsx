@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 export default function NewQuarterlyReview() {
-  const { plans, currentUser, hasDirectReports, addEvaluation, navigate } = useEvaluation();
+  const { plans, currentUser, hasDirectReports, addEvaluation, navigate, pushNotification } = useEvaluation();
 
   const myPlans = plans.filter(p => p.planType === 'quarterly' && p.setupStatus === 'hr_approved' && (p.employeeId === currentUser.id || currentUser.role === 'admin' || hasDirectReports));
 
@@ -69,6 +69,18 @@ export default function NewQuarterlyReview() {
     };
     addEvaluation(eval_);
     toast.success(submit ? 'Quarterly review submitted!' : 'Draft saved!');
+
+    // Notify manager on submit
+    if (submit && plan.managerId) {
+      pushNotification({
+        recipientId: plan.managerId,
+        type: 'eval_submitted',
+        title: 'Quarterly Review Submitted for Scoring',
+        message: `${plan.employeeName} submitted a ${year} ${quarter} quarterly review for your scoring.`,
+        entityType: 'evaluation',
+        entityId: eval_.id,
+      });
+    }
     navigate('/quarterly-reviews');
   };
 

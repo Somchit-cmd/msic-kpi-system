@@ -98,3 +98,44 @@ Stage Summary:
 - All components updated: SetupKpiForm, NewEvaluation, EvaluationView, ScoreButtons, pdfExport
 - Backward compatible with existing data (old plain-text adjustingCriteria parsed gracefully)
 - Dynamic Part I/II/III weights propagated throughout the system
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Add in-app notification system (no push notifications)
+
+Work Log:
+- Found notification system was already partially implemented from previous session:
+  - Notification model in Prisma schema (id, recipientId, type, title, message, entityType, entityId, read, createdAt)
+  - API routes: GET/POST /api/notifications, PUT /api/notifications/[id], PUT /api/notifications/read-all, DELETE /api/notifications/[id]
+  - NotificationBell component with dropdown panel, unread badge, mark-read, mark-all-read
+  - pushNotification() calls in all status transition points (SetupKpiForm, EvaluationView, NewEvaluation, QuarterlyReviewView, NewQuarterlyReview)
+- Fixed critical bug: fetchNotifications used currentUserId from closure, but on initial load, currentUserId was null because React batches state updates
+  - Added userIdRef to track currentUserId synchronously
+  - restoreSession now returns userId for chaining
+  - Initial data load fetches notifications with the returned userId
+  - fetchNotifications accepts optional overrideUserId parameter
+- Fixed React Compiler lint errors:
+  - Removed useEffect that called fetchNotifications directly (setState in effect)
+  - Moved notification fetch into the initial data load Promise.all
+  - Added setUserSession helper to sync both state and ref
+  - Updated login callback to use fetchNotifications(user.id) directly
+  - Updated logout to clear userIdRef and notifications
+- Added notification polling: every 30s while logged in, notifications auto-refresh
+- Updated markAllNotificationsRead to use userIdRef instead of currentUserId state
+- All lint errors resolved (0 errors, 1 pre-existing font warning)
+
+Stage Summary:
+- In-app notification system fully functional
+- Notifications generated for all KPI and evaluation workflow events:
+  - KPI submitted → notify manager
+  - KPI approved by manager → notify employee + HR
+  - KPI rejected by manager → notify employee
+  - KPI approved/rejected by HR → notify employee (+ manager if approved)
+  - Evaluation submitted → notify manager
+  - Evaluation scored by manager → notify employee + HR
+  - Evaluation approved/rejected by HR → notify employee
+- NotificationBell in AppLayout header with unread count badge
+- Click notification navigates to related entity (plan or evaluation)
+- Auto-polling every 30s for new notifications
+- Mark individual or all as read functionality

@@ -34,7 +34,7 @@ const PERFORMANCE_PERIODS = ['H1', 'H2'];
 const QUARTERLY_PERIODS = ['Q1', 'Q2', 'Q3', 'Q4'];
 
 export default function SetupKpiForm() {
-  const { currentUser, users, addPlan, updatePlan, getPlan, plans, navigate, viewParams, settings, hasDirectReports, hasManager } = useEvaluation();
+  const { currentUser, users, addPlan, updatePlan, getPlan, plans, navigate, viewParams, settings, hasDirectReports, hasManager, pushNotification } = useEvaluation();
   const editId = viewParams.id;
   const existing = editId ? getPlan(editId) : undefined;
   const planType: PlanType = (existing?.planType ?? (viewParams.type as PlanType) ?? 'performance');
@@ -244,6 +244,22 @@ export default function SetupKpiForm() {
     };
     if (existing) { updatePlan(plan); toast.success(action === 'submit' ? 'KPI plan submitted for review' : 'Draft saved'); }
     else { addPlan(plan); toast.success(action === 'submit' ? 'KPI plan submitted for review' : 'Draft saved'); }
+
+    // Send notification on submit
+    if (action === 'submit') {
+      const empUser = isEmployee ? currentUser : users.find(u => u.name === selectedEmployee);
+      // Notify the manager/evaluator
+      if (empUser?.managerId) {
+        pushNotification({
+          recipientId: empUser.managerId,
+          type: 'kpi_submitted',
+          title: 'KPI Plan Submitted for Review',
+          message: `${empUser.name} submitted a ${planType === 'performance' ? 'Performance' : 'Quarterly'} KPI plan (${year} ${period ?? ''}) for your review.`,
+          entityType: 'plan',
+          entityId: plan.id,
+        });
+      }
+    }
     navigate('/setup-kpi');
   };
 
@@ -264,6 +280,41 @@ export default function SetupKpiForm() {
       managerFeedback: managerFeedback.trim() || undefined,
     });
     toast.success(approve ? 'KPI plan approved & sent to HR' : 'KPI plan rejected with feedback');
+
+    // Send notifications
+    if (approve) {
+      // Notify employee
+      pushNotification({
+        recipientId: existing.employeeId,
+        type: 'kpi_approved',
+        title: 'KPI Plan Approved by Evaluator',
+        message: `Your ${existing.planType === 'performance' ? 'Performance' : 'Quarterly'} KPI plan (${existing.year} ${existing.period ?? ''}) has been approved by your evaluator and sent to HR.`,
+        entityType: 'plan',
+        entityId: existing.id,
+      });
+      // Notify HR (all admins)
+      const hrUsers = users.filter(u => u.role === 'admin' || u.role === 'superadmin');
+      hrUsers.forEach(hr => {
+        pushNotification({
+          recipientId: hr.id,
+          type: 'kpi_manager_approved',
+          title: 'KPI Plan Needs HR Review',
+          message: `${existing.employeeName}'s KPI plan (${existing.year} ${existing.period ?? ''}) has been approved by the evaluator and needs your HR final review.`,
+          entityType: 'plan',
+          entityId: existing.id,
+        });
+      });
+    } else {
+      // Notify employee about rejection
+      pushNotification({
+        recipientId: existing.employeeId,
+        type: 'kpi_rejected',
+        title: 'KPI Plan Rejected by Evaluator',
+        message: `Your ${existing.planType === 'performance' ? 'Performance' : 'Quarterly'} KPI plan (${existing.year} ${existing.period ?? ''}) was rejected by your evaluator. Please review the feedback and resubmit.`,
+        entityType: 'plan',
+        entityId: existing.id,
+      });
+    }
     navigate('/setup-kpi');
   };
 
@@ -278,6 +329,29 @@ export default function SetupKpiForm() {
       hrFeedback: hrFeedback.trim() || undefined,
     });
     toast.success(approve ? 'KPI plan fully approved' : 'KPI plan rejected with feedback');
+
+    // Notify employee
+    pushNotification({
+      recipientId: existing.employeeId,
+      type: approve ? 'kpi_hr_approved' : 'kpi_hr_rejected',
+      title: approve ? 'KPI Plan Fully Approved' : 'KPI Plan Rejected by HR',
+      message: approve
+        ? `Your ${existing.planType === 'performance' ? 'Performance' : 'Quarterly'} KPI plan (${existing.year} ${existing.period ?? ''}) has been fully approved by HR.`
+        : `Your ${existing.planType === 'performance' ? 'Performance' : 'Quarterly'} KPI plan (${existing.year} ${existing.period ?? ''}) was rejected by HR. Please review the feedback and resubmit.`,
+      entityType: 'plan',
+      entityId: existing.id,
+    });
+    // If approved, also notify the manager
+    if (approve && existing.managerId) {
+      pushNotification({
+        recipientId: existing.managerId,
+        type: 'kpi_hr_approved',
+        title: 'KPI Plan Fully Approved by HR',
+        message: `${existing.employeeName}'s KPI plan (${existing.year} ${existing.period ?? ''}) has been fully approved by HR.`,
+        entityType: 'plan',
+        entityId: existing.id,
+      });
+    }
     navigate('/setup-kpi');
   };
 

@@ -108,3 +108,15 @@ model WorkflowLog {
   details        String?
   transitionedAt DateTime @default(now())
 }
+
+model Notification {
+  id          String   @id
+  recipientId String   // User ID who should receive this notification
+  type        String   // 'kpi_submitted' | 'kpi_approved' | 'kpi_rejected' | 'kpi_hr_approved' | 'kpi_hr_rejected' | 'eval_submitted' | 'eval_scored' | 'eval_hr_approved' | 'eval_hr_rejected'
+  title       String
+  message     String
+  entityType  String   // 'plan' | 'evaluation'
+  entityId    String   // ID of the related entity
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}

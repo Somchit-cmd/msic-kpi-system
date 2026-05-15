@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 export default function QuarterlyReviewView() {
-  const { viewParams, navigate, getEvaluation, updateEvaluation, currentUser, hasDirectReports } = useEvaluation();
+  const { viewParams, navigate, getEvaluation, updateEvaluation, currentUser, hasDirectReports, users, pushNotification } = useEvaluation();
   const id = viewParams.id;
   const eval_ = getEvaluation(id || '');
 
@@ -50,6 +50,28 @@ export default function QuarterlyReviewView() {
       auditLog: [...(eval_.auditLog || []), { timestamp: nowIso, action: 'Evaluator Scored & Sent to HR', fromStatus: 'submitted', toStatus: 'manager_scored', actorId: currentUser.id, actorName: currentUser.name, actorRole: currentUser.role }],
     });
     toast.success('Evaluator scores submitted!');
+
+    // Notify employee
+    pushNotification({
+      recipientId: eval_.employeeId,
+      type: 'eval_scored',
+      title: 'Quarterly Review Scored by Evaluator',
+      message: `Your ${eval_.period} quarterly review has been scored by your evaluator and sent to HR for final approval.`,
+      entityType: 'evaluation',
+      entityId: eval_.id,
+    });
+    // Notify HR (all admins)
+    const hrUsers = users.filter(u => u.role === 'admin' || u.role === 'superadmin');
+    hrUsers.forEach(hr => {
+      pushNotification({
+        recipientId: hr.id,
+        type: 'eval_scored',
+        title: 'Quarterly Review Needs HR Approval',
+        message: `${eval_.employeeName}'s ${eval_.period} quarterly review has been scored by the evaluator and needs your HR approval.`,
+        entityType: 'evaluation',
+        entityId: eval_.id,
+      });
+    });
     navigate('/quarterly-reviews');
   };
 
@@ -60,6 +82,27 @@ export default function QuarterlyReviewView() {
       auditLog: [...(eval_.auditLog || []), { timestamp: nowIso, action: 'HR Approved & Finalized', fromStatus: 'manager_scored', toStatus: 'hr_approved', actorId: currentUser.id, actorName: currentUser.name, actorRole: currentUser.role }],
     });
     toast.success('Quarterly review signed off!');
+
+    // Notify employee
+    pushNotification({
+      recipientId: eval_.employeeId,
+      type: 'eval_hr_approved',
+      title: 'Quarterly Review Approved by HR',
+      message: `Your ${eval_.period} quarterly review has been fully approved by HR.`,
+      entityType: 'evaluation',
+      entityId: eval_.id,
+    });
+    // Notify manager
+    if (eval_.managerId) {
+      pushNotification({
+        recipientId: eval_.managerId,
+        type: 'eval_hr_approved',
+        title: 'Quarterly Review Approved by HR',
+        message: `${eval_.employeeName}'s ${eval_.period} quarterly review has been fully approved by HR.`,
+        entityType: 'evaluation',
+        entityId: eval_.id,
+      });
+    }
     navigate('/quarterly-reviews');
   };
 

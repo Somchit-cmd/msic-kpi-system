@@ -16,7 +16,7 @@ import { ScoreButtons } from '@/components/ScoreButtons';
 import { toast } from 'sonner';
 
 export default function NewEvaluation() {
-  const { plans, currentUser, hasDirectReports, addEvaluation, navigate } = useEvaluation();
+  const { plans, currentUser, hasDirectReports, addEvaluation, navigate, pushNotification, users } = useEvaluation();
 
   const myPlans = plans.filter(p => p.planType === 'performance' && p.setupStatus === 'hr_approved' && (p.employeeId === currentUser.id || currentUser.role === 'admin' || hasDirectReports));
 
@@ -112,6 +112,18 @@ export default function NewEvaluation() {
     };
     addEvaluation(eval_);
     toast.success(submit ? 'Performance review submitted!' : 'Draft saved!');
+
+    // Notify manager on submit
+    if (submit && plan.managerId) {
+      pushNotification({
+        recipientId: plan.managerId,
+        type: 'eval_submitted',
+        title: 'Evaluation Submitted for Scoring',
+        message: `${plan.employeeName} submitted a ${year} ${half} performance evaluation for your scoring.`,
+        entityType: 'evaluation',
+        entityId: eval_.id,
+      });
+    }
     navigate('/performance-reviews');
   };
 

@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 
 export default function EvaluationView() {
-  const { viewParams, navigate, hasDirectReports } = useEvaluation();
+  const { viewParams, navigate, hasDirectReports, users, pushNotification } = useEvaluation();
   const id = viewParams.id;
   const { getEvaluation, updateEvaluation, currentUser, getPlan } = useEvaluation();
   const eval_ = getEvaluation(id || '');
@@ -122,6 +122,28 @@ export default function EvaluationView() {
       ],
     });
     toast.success('Evaluator scores submitted!');
+
+    // Notify employee
+    pushNotification({
+      recipientId: eval_.employeeId,
+      type: 'eval_scored',
+      title: 'Evaluation Scored by Evaluator',
+      message: `Your ${eval_.period} evaluation has been scored by your evaluator and sent to HR for final approval.`,
+      entityType: 'evaluation',
+      entityId: eval_.id,
+    });
+    // Notify HR (all admins)
+    const hrUsers = users.filter(u => u.role === 'admin' || u.role === 'superadmin');
+    hrUsers.forEach(hr => {
+      pushNotification({
+        recipientId: hr.id,
+        type: 'eval_scored',
+        title: 'Evaluation Needs HR Approval',
+        message: `${eval_.employeeName}'s ${eval_.period} evaluation has been scored by the evaluator and needs your HR approval.`,
+        entityType: 'evaluation',
+        entityId: eval_.id,
+      });
+    });
     navigate('/');
   };
 
@@ -147,6 +169,27 @@ export default function EvaluationView() {
       ],
     });
     toast.success('Evaluation approved!');
+
+    // Notify employee
+    pushNotification({
+      recipientId: eval_.employeeId,
+      type: 'eval_hr_approved',
+      title: 'Evaluation Approved by HR',
+      message: `Your ${eval_.period} evaluation has been fully approved by HR.`,
+      entityType: 'evaluation',
+      entityId: eval_.id,
+    });
+    // Notify manager
+    if (eval_.managerId) {
+      pushNotification({
+        recipientId: eval_.managerId,
+        type: 'eval_hr_approved',
+        title: 'Evaluation Approved by HR',
+        message: `${eval_.employeeName}'s ${eval_.period} evaluation has been fully approved by HR.`,
+        entityType: 'evaluation',
+        entityId: eval_.id,
+      });
+    }
     navigate('/');
   };
 
@@ -176,6 +219,16 @@ export default function EvaluationView() {
       ],
     });
     toast.success('Evaluation rejected with feedback');
+
+    // Notify employee
+    pushNotification({
+      recipientId: eval_.employeeId,
+      type: 'eval_hr_rejected',
+      title: 'Evaluation Rejected by HR',
+      message: `Your ${eval_.period} evaluation was rejected by HR. Please review the feedback.`,
+      entityType: 'evaluation',
+      entityId: eval_.id,
+    });
     navigate('/');
   };
 
