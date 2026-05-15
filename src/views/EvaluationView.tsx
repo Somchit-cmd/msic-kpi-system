@@ -1,7 +1,7 @@
 'use client';
 
 import { useEvaluation } from '@/context/EvaluationContext';
-import { calcPartI, calcPartII, calcPartIII, calcFinalScore, getGrade, getGradeColor, getBehaviorCategoriesWithScores } from '@/types/evaluation';
+import { calcPartI, calcPartII, calcPartIII, calcFinalScore, calcPartIIIFromFactors, getGrade, getGradeColor, getBehaviorCategoriesWithScores, parseAdjustingCriteria, getPartWeights, AdjustingFactorItem } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,17 +12,30 @@ import { generatePDF } from '@/utils/pdfExport';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Download, ArrowLeft, ChevronDown, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 
 export default function EvaluationView() {
   const { viewParams, navigate, hasDirectReports } = useEvaluation();
   const id = viewParams.id;
-  const { getEvaluation, updateEvaluation, currentUser } = useEvaluation();
+  const { getEvaluation, updateEvaluation, currentUser, getPlan } = useEvaluation();
   const eval_ = getEvaluation(id || '');
 
+  // Get the associated KPI plan to read adjusting criteria structure
+  const plan = eval_?.planId ? getPlan(eval_.planId) : undefined;
+  const planAdjusting = parseAdjustingCriteria(plan?.adjustingCriteria);
+  const partWeights = getPartWeights(planAdjusting.partWeight);
+
+  // Manager scoring state
   const [managerObjectives, setManagerObjectives] = useState(eval_?.objectives || []);
   const [managerBehaviors, setManagerBehaviors] = useState(eval_?.behaviors || []);
   const [managerAdjusting, setManagerAdjusting] = useState(eval_?.adjustingFactor || { selfScore: 0, managerScore: 0, notes: '' });
+  const [managerAdjustingFactors, setManagerAdjustingFactors] = useState<AdjustingFactorItem[]>(
+    planAdjusting.factors.map(f => ({
+      ...f,
+      // Preserve existing manager scores if any (from a previous save)
+      managerScore: 0,
+    }))
+  );
   const [hrNotes, setHrNotes] = useState(eval_?.hrNotes || '');
   const [hrRejectFeedback, setHrRejectFeedback] = useState('');
 
@@ -50,22 +63,49 @@ export default function EvaluationView() {
 
   const behaviorCategories = getBehaviorCategoriesWithScores(displayBehaviors, eval_.isLeadership);
 
-  const selfScore = calcFinalScore(eval_, false);
-  const managerScore = useManager ? calcFinalScore({ ...eval_, objectives: displayObjs, behaviors: displayBehaviors, adjustingFactor: displayAdjusting }, true) : 0;
+  // Use dynamic part weights from plan, fall back to 45/45/10
+  const p3w = planAdjusting.partWeight;
+  const weights = partWeights;
+
+  const selfScore = calcFinalScore(eval_, false, p3w);
+  const managerScore = useManager ? calcFinalScore({ ...eval_, objectives: displayObjs, behaviors: displayBehaviors, adjustingFactor: displayAdjusting }, true, p3w) : 0;
   const finalScore = useManager ? managerScore : selfScore;
 
+  // Compute weighted adjusting factor score for display
+  const hasStructuredFactors = planAdjusting.factors.length > 0;
+
   const submitManagerScores = () => {
-    const hasNoScore = managerObjectives.some(o => o.managerScore === 0) || managerBehaviors.some(b => b.managerScore === 0) || managerAdjusting.managerScore === 0;
+    const hasNoScore = managerObjectives.some(o => o.managerScore === 0) || managerBehaviors.some(b => b.managerScore === 0);
     if (hasNoScore) {
-      toast.error('Please score all items');
+      toast.error('Please score all items in Part I and Part II');
       return;
     }
+    if (hasStructuredFactors && managerAdjustingFactors.some(f => f.managerScore === 0)) {
+      toast.error('Please score all adjusting factors in Part III');
+      return;
+    }
+    if (!hasStructuredFactors && managerAdjusting.managerScore === 0 && p3w > 0) {
+      toast.error('Please score the adjusting factor in Part III');
+      return;
+    }
+
+    // Build the single adjustingFactor for backward compat
+    let finalAdjusting = managerAdjusting;
+    if (hasStructuredFactors) {
+      const totalW = managerAdjustingFactors.reduce((s, f) => s + f.weight, 0);
+      if (totalW > 0) {
+        const weightedSelf = managerAdjustingFactors.reduce((s, f) => s + (f.selfScore * f.weight) / totalW, 0);
+        const weightedManager = managerAdjustingFactors.reduce((s, f) => s + (f.managerScore * f.weight) / totalW, 0);
+        finalAdjusting = { selfScore: Math.round(weightedSelf * 100) / 100, managerScore: Math.round(weightedManager * 100) / 100, notes: planAdjusting.notes ?? '' };
+      }
+    }
+
     const nowIso = new Date().toISOString();
     updateEvaluation({
       ...eval_,
       objectives: managerObjectives,
       behaviors: managerBehaviors,
-      adjustingFactor: managerAdjusting,
+      adjustingFactor: finalAdjusting,
       status: 'manager_scored',
       updatedAt: nowIso.split('T')[0],
       auditLog: [
@@ -182,20 +222,20 @@ export default function EvaluationView() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card>
           <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-xs text-muted-foreground">Part I (45%)</p>
-            <p className="text-xl font-bold">{calcPartI(displayObjs, useManager).toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Part I ({weights.part1}%)</p>
+            <p className="text-xl font-bold">{calcPartI(displayObjs, useManager, weights.part1).toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-xs text-muted-foreground">Part II (45%)</p>
-            <p className="text-xl font-bold">{calcPartII(displayBehaviors, useManager).toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Part II ({weights.part2}%)</p>
+            <p className="text-xl font-bold">{calcPartII(displayBehaviors, useManager, weights.part2).toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-xs text-muted-foreground">Part III (10%)</p>
-            <p className="text-xl font-bold">{calcPartIII(displayAdjusting, useManager).toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Part III ({weights.part3}%)</p>
+            <p className="text-xl font-bold">{calcPartIII(displayAdjusting, useManager, weights.part3).toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -311,29 +351,87 @@ export default function EvaluationView() {
 
       {/* Part III */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Part III — Adjusting Factors</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Self Score</p>
-              <p className="font-bold text-lg">{displayAdjusting.selfScore || '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Evaluator Score</p>
-              {canScore ? (
-                <ScoreButtons
-                  value={managerAdjusting.managerScore}
-                  onChange={v => setManagerAdjusting(prev => ({ ...prev, managerScore: v }))}
-                />
-              ) : (
-                <p className="font-bold text-lg">{displayAdjusting.managerScore || '—'}</p>
+        <CardHeader><CardTitle className="text-base">Part III — Adjusting Factors ({weights.part3}%)</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {hasStructuredFactors ? (
+            /* Structured adjusting factors from KPI plan */
+            <div className="space-y-3">
+              {planAdjusting.factors.map((f, i) => {
+                const managerFactor = canScore ? managerAdjustingFactors[i] : null;
+                return (
+                  <div key={f.id} className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-muted-foreground">{i + 1}.</span>
+                          <p className="font-medium text-sm">{f.topic}</p>
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium ${f.category === 'positive' ? 'text-success' : 'text-destructive'}`}>
+                            ● {f.category === 'positive' ? 'Positive' : 'Negative'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">Weight: {f.weight}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Self</p>
+                        <p className="font-bold">{f.selfScore || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Evaluator</p>
+                        {canScore ? (
+                          <ScoreButtons
+                            value={managerFactor?.managerScore || 0}
+                            onChange={v => {
+                              const newFactors = [...managerAdjustingFactors];
+                              newFactors[i] = { ...newFactors[i], managerScore: v };
+                              setManagerAdjustingFactors(newFactors);
+                            }}
+                            allowedScores={[1, 2, 4, 5]}
+                          />
+                        ) : (
+                          <p className="font-bold">{f.managerScore || '—'}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {planAdjusting.notes && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-sm mt-1">{planAdjusting.notes}</p>
+                </div>
               )}
             </div>
-          </div>
-          {displayAdjusting.notes && (
-            <div>
-              <p className="text-xs text-muted-foreground">Notes</p>
-              <p className="text-sm mt-1">{displayAdjusting.notes}</p>
+          ) : (
+            /* Legacy single adjusting factor */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Self Score</p>
+                  <p className="font-bold text-lg">{displayAdjusting.selfScore || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Evaluator Score</p>
+                  {canScore ? (
+                    <ScoreButtons
+                      value={managerAdjusting.managerScore}
+                      onChange={v => setManagerAdjusting(prev => ({ ...prev, managerScore: v }))}
+                    />
+                  ) : (
+                    <p className="font-bold text-lg">{displayAdjusting.managerScore || '—'}</p>
+                  )}
+                </div>
+              </div>
+              {displayAdjusting.notes && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-sm mt-1">{displayAdjusting.notes}</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

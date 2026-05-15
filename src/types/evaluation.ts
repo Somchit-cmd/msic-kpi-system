@@ -87,6 +87,58 @@ export interface AdjustingFactor {
   notes: string;
 }
 
+// New structured adjusting factor for KPI Setup Part III
+export type AdjustingCategory = 'positive' | 'negative';
+
+export interface AdjustingFactorItem {
+  id: string;
+  topic: string;
+  category: AdjustingCategory;
+  weight: number; // relative weight within Part III, all must sum to 100%
+  selfScore: number; // 0, 1, 2, 4, 5 during evaluation
+  managerScore: number; // 0, 1, 2, 4, 5 during evaluation
+}
+
+export interface AdjustingFactorCriteria {
+  partWeight: number; // 0-15, weight of Part III relative to overall performance (%)
+  factors: AdjustingFactorItem[];
+  notes?: string; // optional notes
+}
+
+// Score definitions for adjusting factors (no score 3)
+export const ADJUSTING_SCORE_LABELS: Record<number, string> = {
+  5: 'Outstanding contribution and deserve extra rewards',
+  4: 'Significant contribution and deserve extra rewards',
+  2: 'Significant failure and deserve some punishment',
+  1: 'Unacceptable failure and deserve strong punishment',
+};
+
+// Helper: parse adjustingCriteria string (backward compatible)
+export function parseAdjustingCriteria(raw?: string): AdjustingFactorCriteria {
+  if (!raw) return { partWeight: 10, factors: [] };
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === 'object' && parsed !== null && 'partWeight' in parsed) {
+      return parsed as AdjustingFactorCriteria;
+    }
+    // Old format: plain string description — convert to single factor
+    return { partWeight: 10, factors: [], notes: raw };
+  } catch {
+    // Old format: plain text
+    return { partWeight: 10, factors: [], notes: raw };
+  }
+}
+
+// Helper: get Part I and Part II weights from Part III weight
+export function getPartWeights(part3Weight: number) {
+  const remaining = 100 - part3Weight;
+  return {
+    part1: remaining / 2,
+    part2: remaining / 2,
+    part3: part3Weight,
+  };
+}
+
 export interface AuditLogEntry {
   timestamp: string; // ISO datetime
   action: string; // e.g. "Draft Created", "Submitted to Evaluator", "Evaluator Scored", "HR Signed Off"
@@ -416,28 +468,41 @@ export function getGradeColor(score: number): string {
   return 'text-score-1';
 }
 
-export function calcPartI(objectives: Objective[], useManager = false): number {
+export function calcPartI(objectives: Objective[], useManager = false, part1Weight = 45): number {
   const totalWeight = objectives.reduce((s, o) => s + o.weight, 0);
   if (totalWeight === 0) return 0;
   const weighted = objectives.reduce((s, o) => {
     const score = useManager ? o.managerScore : o.selfScore;
     return s + (score * o.weight) / 100;
   }, 0);
-  return weighted * 0.45;
+  return weighted * (part1Weight / 100);
 }
 
-export function calcPartII(behaviors: BehaviorScore[], useManager = false): number {
+export function calcPartII(behaviors: BehaviorScore[], useManager = false, part2Weight = 45): number {
   if (behaviors.length === 0) return 0;
   const avg = behaviors.reduce((s, b) => s + (useManager ? b.managerScore : b.selfScore), 0) / behaviors.length;
-  return avg * 0.45;
+  return avg * (part2Weight / 100);
 }
 
-export function calcPartIII(af: AdjustingFactor, useManager = false): number {
-  return (useManager ? af.managerScore : af.selfScore) * 0.10;
+export function calcPartIII(af: AdjustingFactor, useManager = false, part3Weight = 10): number {
+  return (useManager ? af.managerScore : af.selfScore) * (part3Weight / 100);
 }
 
-export function calcFinalScore(eval_: Evaluation, useManager = false): number {
-  return calcPartI(eval_.objectives, useManager) + calcPartII(eval_.behaviors, useManager) + calcPartIII(eval_.adjustingFactor, useManager);
+// New: calculate Part III from structured adjusting factors
+export function calcPartIIIFromFactors(factors: AdjustingFactorItem[], useManager = false, part3Weight = 10): number {
+  if (factors.length === 0) return 0;
+  const totalWeight = factors.reduce((s, f) => s + f.weight, 0);
+  if (totalWeight === 0) return 0;
+  const weighted = factors.reduce((s, f) => {
+    const score = useManager ? f.managerScore : f.selfScore;
+    return s + (score * f.weight) / totalWeight;
+  }, 0);
+  return weighted * (part3Weight / 100);
+}
+
+export function calcFinalScore(eval_: Evaluation, useManager = false, part3Weight = 10): number {
+  const weights = getPartWeights(part3Weight);
+  return calcPartI(eval_.objectives, useManager, weights.part1) + calcPartII(eval_.behaviors, useManager, weights.part2) + calcPartIII(eval_.adjustingFactor, useManager, weights.part3);
 }
 
 // Quarterly: average % achievement across objectives (0–100)

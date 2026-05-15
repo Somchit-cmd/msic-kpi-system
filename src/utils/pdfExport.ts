@@ -1,11 +1,15 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Evaluation, calcPartI, calcPartII, calcPartIII, calcFinalScore, getGrade, STATUS_LABELS } from '@/types/evaluation';
+import { Evaluation, calcPartI, calcPartII, calcPartIII, calcFinalScore, getGrade, STATUS_LABELS, getPartWeights, parseAdjustingCriteria } from '@/types/evaluation';
 
 export function generatePDF(eval_: Evaluation) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   let y = 15;
+
+  // Parse plan adjusting criteria for dynamic weights (default 10 if no plan)
+  const part3Weight = 10; // Fallback; in a real scenario we'd pass the plan's adjustingCriteria
+  const weights = getPartWeights(part3Weight);
 
   // Header
   doc.setFillColor(30, 45, 80);
@@ -46,7 +50,7 @@ export function generatePDF(eval_: Evaluation) {
   // Part I
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Part I — Personal Objectives (45%)', 14, y);
+  doc.text(`Part I — Personal Objectives (${weights.part1}%)`, 14, y);
   y += 3;
 
   autoTable(doc, {
@@ -68,13 +72,13 @@ export function generatePDF(eval_: Evaluation) {
   y = (doc as any).lastAutoTable.finalY + 5;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Part I Score: ${calcPartI(eval_.objectives, true).toFixed(2)}`, 14, y);
+  doc.text(`Part I Score: ${calcPartI(eval_.objectives, true, weights.part1).toFixed(2)}`, 14, y);
   y += 10;
 
   // Part II
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Part II — Core Values & Behaviors (45%)', 14, y);
+  doc.text(`Part II — Core Values & Behaviors (${weights.part2}%)`, 14, y);
   y += 3;
 
   autoTable(doc, {
@@ -89,14 +93,14 @@ export function generatePDF(eval_: Evaluation) {
   y = (doc as any).lastAutoTable.finalY + 5;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Part II Score: ${calcPartII(eval_.behaviors, true).toFixed(2)}`, 14, y);
+  doc.text(`Part II Score: ${calcPartII(eval_.behaviors, true, weights.part2).toFixed(2)}`, 14, y);
   y += 10;
 
   // Part III
   if (y > 250) { doc.addPage(); y = 20; }
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Part III — Adjusting Factors (10%)', 14, y);
+  doc.text(`Part III — Adjusting Factors (${weights.part3}%)`, 14, y);
   y += 3;
 
   autoTable(doc, {
@@ -115,12 +119,12 @@ export function generatePDF(eval_: Evaluation) {
     doc.text(`Notes: ${eval_.adjustingFactor.notes}`, 14, y);
     y += 5;
   }
-  doc.text(`Part III Score: ${calcPartIII(eval_.adjustingFactor, true).toFixed(2)}`, 14, y);
+  doc.text(`Part III Score: ${calcPartIII(eval_.adjustingFactor, true, weights.part3).toFixed(2)}`, 14, y);
   y += 12;
 
   // Final Score
   if (y > 250) { doc.addPage(); y = 20; }
-  const finalScore = calcFinalScore(eval_, true);
+  const finalScore = calcFinalScore(eval_, true, part3Weight);
   doc.setFillColor(240, 240, 245);
   doc.roundedRect(14, y, pageWidth - 28, 30, 3, 3, 'F');
   doc.setFontSize(12);
@@ -136,7 +140,7 @@ export function generatePDF(eval_: Evaluation) {
 
   // Score breakdown
   doc.setFontSize(9);
-  doc.text(`Part I: ${calcPartI(eval_.objectives, true).toFixed(2)} | Part II: ${calcPartII(eval_.behaviors, true).toFixed(2)} | Part III: ${calcPartIII(eval_.adjustingFactor, true).toFixed(2)}`, 14, y);
+  doc.text(`Part I: ${calcPartI(eval_.objectives, true, weights.part1).toFixed(2)} | Part II: ${calcPartII(eval_.behaviors, true, weights.part2).toFixed(2)} | Part III: ${calcPartIII(eval_.adjustingFactor, true, weights.part3).toFixed(2)}`, 14, y);
   y += 10;
 
   // HR Notes
@@ -211,7 +215,7 @@ export function generatePDF(eval_: Evaluation) {
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
-    doc.text(`KPI Performance Evaluation — ${eval_.employeeName} — Page ${i} of ${pageCount}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+    doc.text(`KPI Performance Evaluation — ${eval_.employeeName} — Page ${i} of ${pageCount}`, pageWidth / 2, doc.internalPageSize.getHeight() - 8, { align: 'center' });
   }
 
   doc.save(`KPI_Evaluation_${eval_.employeeName.replace(/\s+/g, '_')}_${eval_.period.replace(/\s+/g, '_')}.pdf`);

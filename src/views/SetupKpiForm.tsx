@@ -4,7 +4,9 @@ import { useState, useMemo } from 'react';
 import { useEvaluation } from '@/context/EvaluationContext';
 import {
   Objective, generateBehaviorScores, isLeadershipRole,
-  KpiPlan, defaultScoreCriteria, SCORE_LABELS, PlanType, SetupStatus,
+  KpiPlan, defaultScoreCriteria, SCORE_LABELS, PlanType,
+  AdjustingFactorItem, AdjustingFactorCriteria, AdjustingCategory,
+  parseAdjustingCriteria, getPartWeights, ADJUSTING_SCORE_LABELS,
 } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SetupStatusBadge } from '@/components/StatusBadge';
-import { Plus, Trash2, ChevronDown, ArrowLeft, Copy, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ArrowLeft, Copy, AlertCircle, Info } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,7 +98,15 @@ export default function SetupKpiForm() {
   const [objectives, setObjectives] = useState<Objective[]>(existing?.objectives ?? [
     { id: crypto.randomUUID(), description: '', strategy: '', supportNeeded: '', scoreCriteria: defaultScoreCriteria(), category: objectiveCategories[0]?.toLowerCase() || 'operation', weight: 100, selfScore: 0, managerScore: 0 },
   ]);
-  const [adjustingCriteria, setAdjustingCriteria] = useState(existing?.adjustingCriteria ?? '');
+
+  // Part III — Adjusting Factors (structured)
+  const [part3Weight, setPart3Weight] = useState(() => parseAdjustingCriteria(existing?.adjustingCriteria).partWeight);
+  const [adjustingFactors, setAdjustingFactors] = useState<AdjustingFactorItem[]>(() => parseAdjustingCriteria(existing?.adjustingCriteria).factors);
+  const [adjustingNotes, setAdjustingNotes] = useState(() => parseAdjustingCriteria(existing?.adjustingCriteria).notes ?? '');
+
+  // Computed part weights
+  const partWeights = useMemo(() => getPartWeights(part3Weight), [part3Weight]);
+  const adjustingTotalWeight = adjustingFactors.reduce((s, f) => s + f.weight, 0);
 
   // Review feedback
   const [managerFeedback, setManagerFeedback] = useState(existing?.managerFeedback ?? '');
@@ -125,6 +135,24 @@ export default function SetupKpiForm() {
     ));
   };
 
+  // Adjusting factor helpers
+  const addAdjustingFactor = () => {
+    setAdjustingFactors(prev => [...prev, {
+      id: crypto.randomUUID(),
+      topic: '',
+      category: 'positive' as AdjustingCategory,
+      weight: 0,
+      selfScore: 0,
+      managerScore: 0,
+    }]);
+  };
+  const removeAdjustingFactor = (id: string) => {
+    setAdjustingFactors(prev => prev.filter(f => f.id !== id));
+  };
+  const updateAdjustingFactor = (id: string, field: keyof AdjustingFactorItem, value: any) => {
+    setAdjustingFactors(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
+  };
+
   const toggleObj = (id: string) => {
     setSelectedObjIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
@@ -141,7 +169,11 @@ export default function SetupKpiForm() {
       scoreCriteria: defaultScoreCriteria(), // reset criteria for new period
     }));
     setObjectives(imported);
-    setAdjustingCriteria(sourcePlan.adjustingCriteria ?? '');
+    // Also import adjusting criteria
+    const srcCriteria = parseAdjustingCriteria(sourcePlan.adjustingCriteria);
+    setPart3Weight(srcCriteria.partWeight);
+    setAdjustingFactors(srcCriteria.factors.map(f => ({ ...f, id: crypto.randomUUID(), selfScore: 0, managerScore: 0 })));
+    setAdjustingNotes(srcCriteria.notes ?? '');
     toast.success(`Imported ${imported.length} objectives from ${sourcePlan.period}`);
   };
 
@@ -163,7 +195,30 @@ export default function SetupKpiForm() {
       finalObjectives = objectives;
     }
 
+    // Validate Part III adjusting factors
+    if (!isQuarterly) {
+      if (adjustingFactors.length > 0 && adjustingTotalWeight !== 100) {
+        toast.error('Adjusting factor weights must sum to 100%');
+        return;
+      }
+      if (part3Weight < 0 || part3Weight > 15) {
+        toast.error('Part III weight must be between 0% and 15%');
+        return;
+      }
+      if (adjustingFactors.some(f => !f.topic.trim())) {
+        toast.error('All adjusting factors must have a topic');
+        return;
+      }
+    }
+
     const targetIsLeadership = isLeadershipRole(users.some(u => u.managerId === (empUser ?? currentUser).id));
+
+    // Serialize adjusting criteria
+    const adjustingCriteriaValue: AdjustingFactorCriteria = {
+      partWeight: part3Weight,
+      factors: adjustingFactors,
+      notes: adjustingNotes || undefined,
+    };
 
     const plan: KpiPlan = {
       id: existing?.id ?? crypto.randomUUID(),
@@ -181,7 +236,7 @@ export default function SetupKpiForm() {
       setupStatus: action === 'submit' ? 'submitted' : 'draft',
       objectives: finalObjectives,
       behaviors: existing?.behaviors ?? (isQuarterly ? [] : generateBehaviorScores(targetIsLeadership)),
-      adjustingCriteria: isQuarterly ? undefined : adjustingCriteria,
+      adjustingCriteria: isQuarterly ? undefined : JSON.stringify(adjustingCriteriaValue),
       managerFeedback: existing?.managerFeedback,
       hrFeedback: existing?.hrFeedback,
       createdAt: existing?.createdAt ?? today,
@@ -202,7 +257,6 @@ export default function SetupKpiForm() {
     }
     if (!approve && !managerFeedback.trim()) { toast.error('Please provide feedback for rejection'); return; }
 
-    const today = new Date().toISOString().split('T')[0];
     updatePlan({
       ...existing,
       objectives,
@@ -418,8 +472,8 @@ export default function SetupKpiForm() {
       ) : (
         <Tabs defaultValue="objectives">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="objectives">Part I — Objectives</TabsTrigger>
-            <TabsTrigger value="adjusting">Part III — Adjusting</TabsTrigger>
+            <TabsTrigger value="objectives">Part I — Objectives ({partWeights.part1}%)</TabsTrigger>
+            <TabsTrigger value="adjusting">Part III — Adjusting ({partWeights.part3}%)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="objectives" className="space-y-4 mt-4">
@@ -579,19 +633,146 @@ export default function SetupKpiForm() {
             </AlertDialog>
           </TabsContent>
 
+          {/* Part III — Adjusting Factors */}
           <TabsContent value="adjusting" className="space-y-4 mt-4">
+            {/* Part Weight Configuration */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Part III — Adjusting Factor Criteria</CardTitle>
-                <CardDescription>Optional. Describe what behaviors / context the adjusting score (1–5) reflects.</CardDescription>
+                <CardTitle className="text-base">Part III — Adjusting Factors</CardTitle>
+                <CardDescription>
+                  Based on remarks provided by the employee, HR, or any person, the evaluator or HRC lists out significant topics.
+                  Assign Part III weight relative to overall performance. Part I and Part II weights are equal and auto-calculated.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <Textarea
-                  value={adjustingCriteria}
-                  onChange={e => setAdjustingCriteria(e.target.value)}
-                  className="min-h-[120px]"
-                  disabled={!canEditObjectives}
-                />
+              <CardContent className="space-y-4">
+                {/* Adjusting Factors Table */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Adjusting Factor Topics</p>
+                    {adjustingFactors.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Weight total: <span className={adjustingTotalWeight === 100 ? 'text-success font-bold' : 'text-destructive font-bold'}>{adjustingTotalWeight}%</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {adjustingFactors.length === 0 ? (
+                    <div className="text-center py-6 border border-dashed rounded-lg">
+                      <p className="text-sm text-muted-foreground">No adjusting factors defined.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Part III is optional. Add factors if there are significant topics to account for.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-muted-foreground">
+                            <th className="pb-3 font-medium w-8">#</th>
+                            <th className="pb-3 font-medium">Topic</th>
+                            <th className="pb-3 font-medium w-28">Category</th>
+                            <th className="pb-3 font-medium w-24">Weight</th>
+                            <th className="pb-3 font-medium w-12"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adjustingFactors.map((f, i) => (
+                            <tr key={f.id} className="border-b last:border-0">
+                              <td className="py-2 text-muted-foreground font-medium">{i + 1}</td>
+                              <td className="py-2 pr-2">
+                                {canEditObjectives ? (
+                                  <Input
+                                    value={f.topic}
+                                    onChange={e => updateAdjustingFactor(f.id, 'topic', e.target.value)}
+                                    placeholder="Describe the adjusting factor..."
+                                    className="text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm">{f.topic || '—'}</span>
+                                )}
+                              </td>
+                              <td className="py-2 pr-2">
+                                {canEditObjectives ? (
+                                  <Select value={f.category} onValueChange={v => updateAdjustingFactor(f.id, 'category', v)}>
+                                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="positive">
+                                        <span className="text-success">●</span> Positive
+                                      </SelectItem>
+                                      <SelectItem value="negative">
+                                        <span className="text-destructive">●</span> Negative
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${f.category === 'positive' ? 'text-success' : 'text-destructive'}`}>
+                                    <span>●</span> {f.category === 'positive' ? 'Positive' : 'Negative'}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2">
+                                {canEditObjectives ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      className="w-16 text-sm"
+                                      value={f.weight}
+                                      onChange={e => updateAdjustingFactor(f.id, 'weight', Number(e.target.value))}
+                                    />
+                                    <span className="text-xs text-muted-foreground">%</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm">{f.weight}%</span>
+                                )}
+                              </td>
+                              <td className="py-2">
+                                {canEditObjectives && (
+                                  <Button variant="ghost" size="icon" className="text-destructive h-7 w-7" onClick={() => removeAdjustingFactor(f.id)}>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {canEditObjectives && (
+                    <Button variant="outline" size="sm" onClick={addAdjustingFactor} className="w-full border-dashed">
+                      <Plus className="h-4 w-4 mr-1" /> Add Adjusting Factor
+                    </Button>
+                  )}
+                </div>
+
+                {/* Score Definitions Reference */}
+                <div className="rounded-lg border border-border p-3 bg-muted/20">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground">Score Definitions for Adjusting Factors</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {Object.entries(ADJUSTING_SCORE_LABELS).map(([score, label]) => (
+                      <div key={score} className="flex items-start gap-2">
+                        <span className={`text-xs font-bold shrink-0 w-4 ${Number(score) >= 4 ? 'text-success' : 'text-destructive'}`}>{score}</span>
+                        <span className="text-xs text-muted-foreground">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">Notes</p>
+                  <Textarea
+                    value={adjustingNotes}
+                    onChange={e => setAdjustingNotes(e.target.value)}
+                    className="min-h-[60px]"
+                    placeholder="Additional notes about adjusting factors..."
+                    disabled={!canEditObjectives}
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

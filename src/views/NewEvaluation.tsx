@@ -3,7 +3,9 @@
 import { useState, useMemo } from 'react';
 import { useEvaluation } from '@/context/EvaluationContext';
 import {
-  getBehaviorCategoriesWithScores, calcPartI, calcPartII, calcPartIII, Evaluation,
+  getBehaviorCategoriesWithScores, calcPartI, calcPartII, calcPartIIIFromFactors, Evaluation,
+  AdjustingFactorItem, AdjustingFactorCriteria, parseAdjustingCriteria, getPartWeights,
+  ADJUSTING_SCORE_LABELS,
 } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,9 +25,16 @@ export default function NewEvaluation() {
   const [half, setHalf] = useState('H1');
   const plan = useMemo(() => plans.find(p => p.id === planId), [planId, plans]);
 
+  // Parse adjusting criteria from plan
+  const planAdjusting = useMemo(() => parseAdjustingCriteria(plan?.adjustingCriteria), [plan?.adjustingCriteria]);
+  const partWeights = useMemo(() => getPartWeights(planAdjusting.partWeight), [planAdjusting.partWeight]);
+
   const [objectives, setObjectives] = useState(plan ? plan.objectives.map(o => ({ ...o, selfScore: 0, managerScore: 0 })) : []);
   const [behaviors, setBehaviors] = useState(plan ? plan.behaviors.map(b => ({ ...b, selfScore: 0, managerScore: 0 })) : []);
-  const [adjusting, setAdjusting] = useState({ selfScore: 0, managerScore: 0, notes: '' });
+  const [adjustingFactors, setAdjustingFactors] = useState<AdjustingFactorItem[]>(
+    planAdjusting.factors.map(f => ({ ...f, selfScore: 0, managerScore: 0 }))
+  );
+  const [adjustingNotes, setAdjustingNotes] = useState(planAdjusting.notes ?? '');
 
   const handlePlanChange = (newPlanId: string) => {
     setPlanId(newPlanId);
@@ -33,12 +42,15 @@ export default function NewEvaluation() {
     if (newPlan) {
       setObjectives(newPlan.objectives.map(o => ({ ...o, selfScore: 0, managerScore: 0 })));
       setBehaviors(newPlan.behaviors.map(b => ({ ...b, selfScore: 0, managerScore: 0 })));
+      const newAdjusting = parseAdjustingCriteria(newPlan.adjustingCriteria);
+      setAdjustingFactors(newAdjusting.factors.map(f => ({ ...f, selfScore: 0, managerScore: 0 })));
+      setAdjustingNotes(newAdjusting.notes ?? '');
     }
   };
 
-  const partI = calcPartI(objectives);
-  const partII = calcPartII(behaviors);
-  const partIII = calcPartIII(adjusting);
+  const partI = calcPartI(objectives, false, partWeights.part1);
+  const partII = calcPartII(behaviors, false, partWeights.part2);
+  const partIII = calcPartIIIFromFactors(adjustingFactors, false, partWeights.part3);
   const total = partI + partII + partIII;
 
   const behaviorCategories = useMemo(
@@ -48,12 +60,28 @@ export default function NewEvaluation() {
 
   const setObjScore = (id: string, v: number) => setObjectives(prev => prev.map(o => o.id === id ? { ...o, selfScore: v } : o));
   const setBehaviorScore = (subTopicId: string, v: number) => setBehaviors(prev => prev.map(b => b.subTopicId === subTopicId ? { ...b, selfScore: v } : b));
+  const setAdjustingScore = (id: string, v: number) => setAdjustingFactors(prev => prev.map(f => f.id === id ? { ...f, selfScore: v } : f));
+
+  // Compute a single AdjustingFactor for backward compat with Evaluation type
+  const buildAdjustingFactor = () => {
+    if (adjustingFactors.length === 0) {
+      return { selfScore: 0, managerScore: 0, notes: adjustingNotes };
+    }
+    const totalWeight = adjustingFactors.reduce((s, f) => s + f.weight, 0);
+    if (totalWeight === 0) return { selfScore: 0, managerScore: 0, notes: adjustingNotes };
+    const weightedSelf = adjustingFactors.reduce((s, f) => s + (f.selfScore * f.weight) / totalWeight, 0);
+    const weightedManager = adjustingFactors.reduce((s, f) => s + (f.managerScore * f.weight) / totalWeight, 0);
+    return { selfScore: Math.round(weightedSelf * 100) / 100, managerScore: Math.round(weightedManager * 100) / 100, notes: adjustingNotes };
+  };
 
   const save = (submit: boolean) => {
     if (!plan) { toast.error('Select a KPI plan'); return; }
     if (submit) {
-      if (objectives.some(o => o.selfScore === 0) || behaviors.some(b => b.selfScore === 0) || adjusting.selfScore === 0) {
-        toast.error('Please score all items'); return;
+      if (objectives.some(o => o.selfScore === 0) || behaviors.some(b => b.selfScore === 0)) {
+        toast.error('Please score all items in Part I and Part II'); return;
+      }
+      if (adjustingFactors.length > 0 && adjustingFactors.some(f => f.selfScore === 0)) {
+        toast.error('Please score all adjusting factors in Part III'); return;
       }
     }
     const nowIso = new Date().toISOString();
@@ -74,7 +102,7 @@ export default function NewEvaluation() {
       updatedAt: today,
       objectives,
       behaviors,
-      adjustingFactor: adjusting,
+      adjustingFactor: buildAdjustingFactor(),
       hrNotes: '',
       isLeadership: plan.isLeadership,
       auditLog: [
@@ -146,9 +174,9 @@ export default function NewEvaluation() {
 
       <Tabs defaultValue="objectives">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="objectives">Part I — Objectives (45%)</TabsTrigger>
-          <TabsTrigger value="behaviors">Part II — Behaviors (45%)</TabsTrigger>
-          <TabsTrigger value="adjusting">Part III — Adjusting (10%)</TabsTrigger>
+          <TabsTrigger value="objectives">Part I — Objectives ({partWeights.part1}%)</TabsTrigger>
+          <TabsTrigger value="behaviors">Part II — Behaviors ({partWeights.part2}%)</TabsTrigger>
+          <TabsTrigger value="adjusting">Part III — Adjusting ({partWeights.part3}%)</TabsTrigger>
         </TabsList>
 
         <TabsContent value="objectives" className="space-y-3 mt-4">
@@ -183,16 +211,46 @@ export default function NewEvaluation() {
         </TabsContent>
 
         <TabsContent value="adjusting" className="space-y-4 mt-4">
-          <Card><CardContent className="pt-4 space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Self Score</p>
-              <ScoreButtons value={adjusting.selfScore} onChange={v => setAdjusting(prev => ({ ...prev, selfScore: v }))} />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Notes</p>
-              <Textarea value={adjusting.notes} onChange={e => setAdjusting(prev => ({ ...prev, notes: e.target.value }))} />
-            </div>
-          </CardContent></Card>
+          {adjustingFactors.length === 0 ? (
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">No adjusting factors defined in this KPI plan. Part III weight ({partWeights.part3}%) will not affect the score.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            adjustingFactors.map((f, i) => (
+              <Card key={f.id}>
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-muted-foreground">{i + 1}.</span>
+                        <p className="font-medium text-sm">{f.topic}</p>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium ${f.category === 'positive' ? 'text-success' : 'text-destructive'}`}>
+                          ● {f.category === 'positive' ? 'Positive' : 'Negative'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">Weight: {f.weight}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1.5">Self Score</p>
+                    <ScoreButtons value={f.selfScore} onChange={v => setAdjustingScore(f.id, v)} allowedScores={[1, 2, 4, 5]} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+          {adjustingNotes && (
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                <p className="text-sm">{adjustingNotes}</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 

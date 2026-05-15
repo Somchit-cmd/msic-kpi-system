@@ -1,12 +1,14 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { SCORE_LABELS } from '@/types/evaluation';
+import { SCORE_LABELS, ADJUSTING_SCORE_LABELS } from '@/types/evaluation';
 
 interface ScoreButtonsProps {
   value: number;
   onChange?: (score: number) => void;
   disabled?: boolean;
+  /** If provided, only show these scores (e.g. [1,2,4,5] for adjusting factors) */
+  allowedScores?: number[];
 }
 
 const scoreColors: Record<number, string> = {
@@ -17,10 +19,14 @@ const scoreColors: Record<number, string> = {
   5: 'bg-score-5 text-white',
 };
 
-export function ScoreButtons({ value, onChange, disabled }: ScoreButtonsProps) {
+export function ScoreButtons({ value, onChange, disabled, allowedScores }: ScoreButtonsProps) {
+  const scores = allowedScores ?? [1, 2, 3, 4, 5];
+  const isAdjusting = !!allowedScores; // Use adjusting labels when custom scores are provided
+  const labels = isAdjusting ? ADJUSTING_SCORE_LABELS : SCORE_LABELS;
+
   return (
-    <div className="flex gap-1.5">
-      {[1, 2, 3, 4, 5].map(score => (
+    <div className="flex gap-1.5 flex-wrap">
+      {scores.map(score => (
         <button
           key={score}
           type="button"
@@ -35,7 +41,7 @@ export function ScoreButtons({ value, onChange, disabled }: ScoreButtonsProps) {
           )}
         >
           <span className="text-sm font-bold">{score}</span>
-          <span className="text-[10px] leading-tight">{SCORE_LABELS[score]}</span>
+          <span className="text-[10px] leading-tight max-w-[80px] text-center">{labels[score] || SCORE_LABELS[score]}</span>
         </button>
       ))}
     </div>
